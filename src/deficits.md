@@ -117,7 +117,7 @@ const seriesName = view(Inputs.radio(Object.keys(SERIES), {label: "Series", valu
 // Log fits need positive values, so the annual deficit (negative in surplus years) is linear only.
 const fitType = view(Inputs.radio(
   SERIES[seriesName].positive ? Object.keys(FITS) : ["Linear"],
-  {label: "Fit type", value: SERIES[seriesName].positive ? "Log-quadratic (changing growth rate)" : "Linear"}
+  {label: "Fit type", value: SERIES[seriesName].positive ? "Exponential (log-linear)" : "Linear"}
 ));
 ```
 

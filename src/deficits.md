@@ -19,7 +19,11 @@ toc: false
 <li><strong>Cumulative deficit (default):</strong> every deficit since 1789 added up, minus surpluses. It's a stock of borrowing that, like the index, compounds over time. It approximates debt held by the public ($27.5T at FY2025).</li>
 <li><strong>Annual deficit:</strong> outlays minus receipts each year. It turns negative in surplus years, so only the Linear fit applies.</li>
 <li><strong>Outlays / Receipts:</strong> total federal spending and revenue each year.</li>
-<li><strong>Interest (% of GDP) / Interest payments:</strong> federal interest outlays from FRED (series FYOIGDA188S and FYOINT), FY1940–2025. These appear to be <em>gross</em> interest, including interest credited to federal trust funds, so they run higher than the <em>net</em> interest figure CBO usually quotes.</li>
+<li><strong>Interest (% of GDP) / Interest payments:</strong> two measures, chosen with <em>Interest measure</em>:
+<ul>
+<li><strong>Total deficit × Fed rate (default):</strong> the prior fiscal year-end cumulative deficit times that fiscal year's average effective Fed funds rate (FRED FEDFUNDS; the 3-month T-bill rate, TB3MS, before FY1955). It prices the whole stock of borrowing at the policy rate, so it moves with the Fed. FY1935–2025 in dollars, FY1940–2025 as a % of GDP.</li>
+<li><strong>Actual outlays (FRED):</strong> federal interest actually paid (FRED FYOINT and FYOIGDA188S), FY1940–2025. That reflects the rates locked in when each bond was issued, so it lags the Fed. It appears to be <em>gross</em> interest, including interest credited to federal trust funds.</li>
+</ul></li>
 </ul>
 <p>Each line is a least-squares fit from its <strong>start year</strong> through FY2025. Fit types and growth math are identical to the S&amp;P page.</p>
 </div></details>
@@ -52,18 +56,21 @@ const budget = (await FileAttachment("data/us_budgets.csv").csv({typed: true})).
 
 const fmtB = (v) => (Math.abs(v) >= 1e6 ? d3.format("$,.2f")(v / 1e6) + "T" : d3.format("$,.1f")(v / 1e3) + "B");
 const fmtPct = d3.format(".2%");
-// get() returns the plotted value for a budget row, or null where the series has no data.
+// Interest measures: "model" = prior cumulative deficit × Fed rate; "actual" = FRED interest outlays.
+const MEASURES = {"Total deficit × Fed rate": "model", "Actual outlays (FRED)": "actual"};
+const pct = (v) => (v == null ? null : v / 100);
+// get(row, measure) returns the plotted value, or null where the series has no data.
 const SERIES = {
   "Cumulative deficit": {get: (d) => d.cum_deficit, positive: true, fmt: fmtB},
   "Annual deficit": {get: (d) => d.deficit, positive: false, fmt: fmtB},
   "Outlays (spending)": {get: (d) => d.outlays, positive: true, fmt: fmtB},
   "Receipts (revenue)": {get: (d) => d.receipts, positive: true, fmt: fmtB},
-  "Interest (% of GDP)": {get: (d) => (d.interest_pct_gdp == null ? null : d.interest_pct_gdp / 100), positive: true, fmt: fmtPct, ratio: true},
-  "Interest payments": {get: (d) => d.interest, positive: true, fmt: fmtB}
+  "Interest (% of GDP)": {get: (d, m) => pct(m === "actual" ? d.interest_pct_gdp : d.model_interest_pct_gdp), positive: true, fmt: fmtPct, ratio: true, interest: true},
+  "Interest payments": {get: (d, m) => (m === "actual" ? d.interest : d.model_interest), positive: true, fmt: fmtB, interest: true}
 };
-const seriesData = (name) =>
+const seriesData = (name, measure) =>
   budget
-    .map((d) => ({year: d.year, date: d.date, close: SERIES[name].get(d)}))
+    .map((d) => ({year: d.year, date: d.date, close: SERIES[name].get(d, measure)}))
     .filter((d) => d.close != null && isFinite(d.close));
 const fmtG = (v) => (isFinite(v) ? d3.format(".1%")(v) : "n/a");
 const fmtSlope = (v) => (isFinite(v) ? d3.format("+.2%")(v) + "/yr" : "n/a");
@@ -72,7 +79,7 @@ const MIN_POINTS = 3;
 
 ```js
 const spec = SERIES[seriesName];
-const data = seriesData(seriesName);
+const data = seriesData(seriesName, interestMeasure);
 const endPoint = data[data.length - 1];
 const model = FITS[fitType];
 const fit = (points, m) => fitTo(points, m, endPoint.date);
@@ -114,6 +121,16 @@ const seriesName = view(Inputs.radio(Object.keys(SERIES), {label: "Series", valu
 ```
 
 ```js
+const interestInput = Inputs.select(Object.keys(MEASURES), {label: "Interest measure", value: "Total deficit × Fed rate"});
+const interestMeasureLabel = view(interestInput);
+```
+
+```js
+const interestMeasure = MEASURES[interestMeasureLabel];
+const bindMeasure = () => Inputs.bind(Inputs.select(Object.keys(MEASURES), {label: "Interest measure"}), interestInput);
+```
+
+```js
 // Log fits need positive values, so the annual deficit (negative in surplus years) is linear only.
 const fitType = view(Inputs.radio(
   SERIES[seriesName].positive ? Object.keys(FITS) : ["Linear"],
@@ -122,7 +139,7 @@ const fitType = view(Inputs.radio(
 ```
 
 ```js
-const seriesRows = seriesData(seriesName);
+const seriesRows = seriesData(seriesName, interestMeasure);
 const startYears = seriesRows.slice(0, seriesRows.length - MIN_POINTS + 1).map((d) => d.year);
 const range = view(Inputs.form(
   {
@@ -285,6 +302,7 @@ const cmpName = view(Inputs.select(
   {label: "Compare S&P 500 with", value: "Interest (% of GDP)"}
 ));
 const cmpMeasure = view(Inputs.radio(["Average over window", "At latest"], {label: "Growth measure", value: "Average over window"}));
+display(bindMeasure());
 ```
 
 ```js
@@ -312,7 +330,7 @@ const spFY = budget
 ```js
 const overlapYears = new Set(spFY.map((d) => d.year));
 const cmpSpec = SERIES[cmpName];
-const bud = seriesData(cmpName).filter((d) => overlapYears.has(d.year));
+const bud = seriesData(cmpName, interestMeasure).filter((d) => overlapYears.has(d.year));
 const sp = spFY.filter((d) => bud.some((b) => b.year === d.year));
 const canLog = cmpSpec.positive && bud.every((d) => d.close > 0);
 const cmpModel = model.log ? model : FITS["Log-quadratic (changing growth rate)"];
@@ -407,12 +425,12 @@ statisticalTests.content.replaceChildren(canLog
 <p>A standard debt-dynamics projection, starting from FY2025 actuals in this data set:</p>
 <ul>
 <li><strong>Debt</strong> (the cumulative deficit as a % of GDP) each year = last year's debt ÷ (1 + GDP growth) + interest + primary deficit.</li>
-<li><strong>Interest</strong> = the effective interest rate × last year's debt ÷ (1 + GDP growth).</li>
-<li><strong>Primary deficit</strong> is the deficit excluding interest. It's held at the chosen % of GDP, and receipts stay at their FY2025 share of GDP for the "% of revenue" columns.</li>
+<li><strong>Interest</strong> = the interest rate × last year's debt ÷ (1 + GDP growth). With <em>Total deficit × Fed rate</em> this is exactly how the historical line is built, and the starting rate is the FY2025 average Fed funds rate. With <em>Actual outlays</em>, the starting rate is FY2025 interest paid ÷ the FY2024 cumulative deficit.</li>
+<li><strong>Primary deficit</strong> is the deficit excluding actual interest paid (the same under both measures). It's held at the chosen % of GDP, and receipts stay at their FY2025 share of GDP for the "% of revenue" columns.</li>
 </ul>
 <p>The key condition: if the interest rate <em>r</em> exceeds nominal GDP growth <em>g</em>, debt compounds faster than the economy even with a balanced primary budget. If <em>r</em> &lt; <em>g</em>, a modest primary deficit can be stable.</p>
 <p>The dashed grey lines simply extend the exponential trend of interest % of GDP fitted from FY2000 and from FY2010. They are a mechanical extrapolation, not a forecast.</p>
-<p>Caveats: the interest series appears to be gross interest (including trust-fund interest). The cumulative deficit understates actual debt (it excludes off-budget borrowing and trust-fund holdings), so the effective rate here is interest ÷ that proxy. Treat the crossing years as orders of magnitude, not dates.</p>
+<p>Caveats: actual outlays appear to be gross interest (including trust-fund interest). The Fed-rate measure assumes all debt reprices at the policy rate every year, while real debt reprices over several years. The cumulative deficit understates actual debt (it excludes off-budget borrowing and trust-fund holdings), so the effective rate here is interest ÷ that proxy. Treat the crossing years as orders of magnitude, not dates.</p>
 </div></details>
 </h2>
 
@@ -429,12 +447,18 @@ invalidation.then(() => scenarioDetails.dialog.close());
 <aside class="ws-side" aria-label="Scenario inputs">
 
 ```js
+display(bindMeasure());
+```
+
+```js
 const last = budget[budget.length - 1], prev = budget[budget.length - 2];
+const isModel = interestMeasure === "model";
+const histI = seriesData("Interest (% of GDP)", interestMeasure);
 const base = {
   year: last.year,
   debt: last.cum_deficit / last.gdp,
-  interest: last.interest_pct_gdp / 100,
-  r: last.interest / prev.cum_deficit,
+  interest: histI[histI.length - 1].close,
+  r: isModel ? last.fed_rate / 100 : last.interest / prev.cum_deficit,
   primary: (last.deficit - last.interest) / last.gdp,
   receipts: last.receipts / last.gdp
 };
@@ -464,7 +488,11 @@ const scenPct = view(Inputs.form(
 ```
 
 ```js
-display(html`<p class="range-note">FY${base.year} starting point: interest ${d3.format(".2%")(base.interest)} of GDP (a record; the prior peak was 3.16% in FY1991), ${d3.format(".0%")(last.interest / last.receipts)} of revenue; debt proxy ${d3.format(".0%")(base.debt)} of GDP; effective rate ${d3.format(".2%")(base.r)}; primary deficit ${d3.format(".1%")(base.primary)} of GDP; receipts ${d3.format(".1%")(base.receipts)} of GDP.</p>`);
+const priorPeak = d3.greatest(histI.slice(0, -1), (d) => d.close);
+const peakNote = base.interest > priorPeak.close
+  ? `a record; the prior peak was ${d3.format(".2%")(priorPeak.close)} in FY${priorPeak.year}`
+  : `the peak was ${d3.format(".2%")(priorPeak.close)} in FY${priorPeak.year}`;
+display(html`<p class="range-note">FY${base.year} starting point (${isModel ? "total deficit × Fed rate" : "actual interest outlays"}): interest ${d3.format(".2%")(base.interest)} of GDP (${peakNote}), ${d3.format(".0%")(base.interest / base.receipts)} of revenue; debt proxy ${d3.format(".0%")(base.debt)} of GDP; ${isModel ? "Fed funds rate" : "effective rate"} ${d3.format(".2%")(base.r)}; primary deficit ${d3.format(".1%")(base.primary)} of GDP; receipts ${d3.format(".1%")(base.receipts)} of GDP.</p>`);
 ```
 
 </aside>
@@ -480,7 +508,6 @@ const SCENARIOS = [
   {name: "Primary balance (0% GDP)", r: base.r, g: 0.04, primary: 0},
   {name: "Faster growth (g 5%)", r: base.r, g: 0.05, primary: base.primary}
 ].map((s) => ({...s, rows: project(s)}));
-const histI = seriesData("Interest (% of GDP)");
 const trendRows = [2000, 2010].flatMap((y0) => {
   const f = fitTo(histI.filter((d) => d.year >= y0), FITS["Exponential (log-linear)"], histI[histI.length - 1].date);
   return d3.range(base.year, HORIZON + 1).map((y) => ({year: y, interest: f.predict(fyEnd(y)), series: `Trend since FY${y0} (${d3.format("+.1%")(f.growthNow)}/yr)`}));
@@ -498,16 +525,16 @@ display(Plot.plot({
   marginLeft: 60,
   y: {grid: true, label: "Interest (% of GDP)", domain: [0, yMax], tickFormat: (v) => d3.format(".1%")(v)},
   x: {label: "Fiscal year", tickFormat: "d"},
-  color: {legend: true, domain: ["Actual", ...names], range: ["#222", "#d62728", "#e8590c", "#2b8a3e", "#7048e8", "#1971c2", "#0c8599"]},
+  color: {legend: true, domain: ["History", ...names], range: ["#222", "#d62728", "#e8590c", "#2b8a3e", "#7048e8", "#1971c2", "#0c8599"]},
   marks: [
     Plot.ruleY([0.05], {stroke: "#d62728", strokeDasharray: "2,3"}),
     Plot.text([{year: 1942, y: 0.05}], {x: "year", y: "y", text: () => `5% of GDP ≈ ${d3.format(".0%")(0.05 / base.receipts)} of revenue`, dy: -7, textAnchor: "start", fill: "#d62728"}),
     Plot.ruleX([base.year], {stroke: "#aaa"}),
     Plot.line(trendRows.filter((d) => d.interest <= yMax), {x: "year", y: "interest", z: "series", stroke: "#999", strokeDasharray: "5,4"}),
     Plot.text(trendRows.filter((d) => d.interest <= yMax && d.year === Math.min(HORIZON, d3.max(trendRows.filter((t) => t.series === d.series && t.interest <= yMax), (t) => t.year))), {x: "year", y: "interest", text: "series", textAnchor: "end", dy: -6, fill: "#777", fontSize: 10}),
-    Plot.line(histI, {x: "year", y: "close", stroke: () => "Actual", strokeWidth: 2}),
+    Plot.line(histI, {x: "year", y: "close", stroke: () => "History", strokeWidth: 2}),
     Plot.line(projRows.filter((d) => d.interest <= yMax), {x: "year", y: "interest", stroke: "series", z: "series", strokeWidth: (d) => (d.series === "Your scenario" ? 3 : 1.5), strokeDasharray: (d) => (d.series === "Your scenario" ? null : "6,3")}),
-    Plot.tip([...histI.map((d) => ({year: d.year, interest: d.close, series: "Actual"})), ...projRows.filter((d) => d.interest <= yMax)], Plot.pointer({x: "year", y: "interest", title: (d) => `FY${d.year} — ${d.series}\nInterest: ${d3.format(".2%")(d.interest)} of GDP` + (d.debt ? `\nDebt: ${d3.format(".0%")(d.debt)} of GDP\nInterest/revenue: ${d3.format(".0%")(d.share)}` : "")}))
+    Plot.tip([...histI.map((d) => ({year: d.year, interest: d.close, series: "History"})), ...projRows.filter((d) => d.interest <= yMax)], Plot.pointer({x: "year", y: "interest", title: (d) => `FY${d.year} — ${d.series}\nInterest: ${d3.format(".2%")(d.interest)} of GDP` + (d.debt ? `\nDebt: ${d3.format(".0%")(d.debt)} of GDP\nInterest/revenue: ${d3.format(".0%")(d.share)}` : "")}))
   ]
 }));
 ```
@@ -539,6 +566,17 @@ scenarioDetails.content.replaceChildren(Inputs.table(SCENARIOS.map((s) => ({
 
 ### Conclusions — interest burden vs. S&P 500 (FY1940–FY2025)
 
+Interest here is the default measure: **prior-year total (cumulative) deficit × the fiscal-year average Fed funds rate** (3-month T-bill before FY1955).
+
+1. **No statistical link to stock returns.** Year-to-year changes in the interest burden are uncorrelated with S&P 500 returns at every lag from −2 to +2 years (r between −0.05 and +0.19, all p > 0.08). The burden level doesn't predict the next 10 years of S&P returns either (+0.13 pp/yr per 1 pp of GDP, p ≈ 0.9). The market hasn't priced the interest burden in any detectable way, under either measure.
+2. **The burden follows the Fed.** Priced at the policy rate, interest was 3.85% of GDP in FY1981 (Fed funds ~17%), fell to almost nothing in FY2009–2021 (0.05% in FY2014, 0.06% in FY2021), then jumped to a **record 4.33% of GDP in FY2024** as rates reached 5.3% on a much larger debt. It eased to 3.68% in FY2025 as the Fed cut. Its long-run trend (+1.6%/yr since FY2000) is far below the S&P's, and the post-2010 trend (+33%/yr) is a rebound from near-zero rates, not a sustainable growth rate.
+3. **Sustainability verdict: not sustainable on the current path, but the clock depends on the Fed.** At the FY2025 Fed rate (4.4%), 4% nominal growth and a 1.8%-of-GDP primary deficit, *r* exceeds *g* by about 0.4 pp and debt reaches ~146% of GDP by 2050. Interest then crosses **5% of GDP around 2040** (≈ 30% of revenue around 2041) and **6% around 2050**. If the Fed holds rates at 5.5%, that comes by **about 2028**; at 3.5% (below growth), not until the 2070s.
+4. **What stabilizes it:** with *r* this close to *g*, closing the primary deficit is enough. Interest levels off near 4.1% of GDP and debt near 100% through 2075. Faster growth (5%) pushes the 5% crossing out to about 2051.
+
+**Bottom line:** interest costs and stock prices have moved independently, so the S&P chart offers no early warning. Measured as total debt × the Fed rate, the burden is already at a record, and on today's settings it becomes the dominant budget pressure in roughly **15–25 years** (about 2040–2050). The range is 2028 to after 2070, set mostly by where the Fed holds rates.
+
+<details class="earlier"><summary>Using actual interest outlays (FRED) instead</summary>
+
 1. **No statistical link to stock returns.** Year-to-year changes in interest as a % of GDP are uncorrelated with S&P 500 returns at every lag from −2 to +2 years (r between 0.00 and +0.16, all p > 0.14). The burden level doesn't significantly predict the next 10 years of S&P returns either (p ≈ 0.2, with a slightly *positive* sign). Historically the market hasn't priced the interest burden in any detectable way.
 2. **The trends diverge sharply.** Over the whole period, interest % of GDP grew about 1%/yr while the S&P compounded at about 7.5%/yr. Interest roughly tracked the economy until 2000 and actually fell from 1980 to 2000. Since FY2010, though, it has grown about **+7.7%/yr faster than GDP** (±2.3 pp), and since FY2000 about +3.4%/yr. That kind of acceleration can't continue indefinitely for a ratio to GDP.
 3. **The burden is at a record.** FY2025 interest is 3.94% of GDP and about 23% of revenue, above the 1991 peak of 3.16%.
@@ -546,6 +584,8 @@ scenarioDetails.content.replaceChildren(Inputs.table(SCENARIOS.map((s) => ({
 5. **What would stabilize it:** only *r* ≤ *g* plus a small primary deficit, or a primary *surplus* while *r* > *g*. Closing the primary deficit to zero slows the climb a lot (4.3% of GDP in 2035, 4.8% in 2050, debt about 106%), but 5% still arrives around 2057. Faster growth alone (5%) delays the 5% crossing to about 2041.
 
 **Bottom line:** interest costs and stock prices have moved independently, so the S&P chart offers no early warning. The arithmetic of debt does: unless rates fall below growth or the primary deficit closes, interest becomes the dominant budget pressure within roughly **10–20 years** (mid-2030s to mid-2040s), with a realistic range of about 2028–2075 depending mainly on interest rates.
+
+</details>
 
 <details class="earlier"><summary>Earlier findings: cumulative deficit vs. S&amp;P 500 (FY1928–FY2025)</summary>
 

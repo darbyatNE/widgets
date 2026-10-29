@@ -6,8 +6,13 @@ Static site for [lee-river.com](https://lee-river.com), built with [Observable F
 |---|---|---|
 | Homepage | `/` | `src/index.md` |
 | S&P 500 Regression Trend Lines | `/sp500` | `src/sp500.md` |
+| US Deficit Regression Trend Lines | `/deficits` | `src/deficits.md` |
 
-Data: `src/data/sp500_monthly.csv` holds month-end S&P 500 closes from 1928 to the present, newest first. Columns are `date,close` with no header row.
+Shared code lives in `src/components/`: `regression.js` holds the trend-line fits used by both pages, and `stats.js` holds the significance tests (Newey-West OLS, correlation p-values, Engle-Granger).
+
+Data:
+- `src/data/sp500_monthly.csv` holds month-end S&P 500 closes from 1928 to the present, newest first. Columns are `date,close` with no header row.
+- `src/data/us_budgets.csv` holds federal receipts, outlays, deficit and cumulative deficit by fiscal year, in $ millions. It's generated from OMB Historical Table 1.1 (`data-src/US_budgets.xlsx`).
 
 ## Local development
 
@@ -37,8 +42,21 @@ The `lee-river.com` DNS is already managed by Cloudflare.
 4. In the Pages project, go to **Custom domains → Set up a custom domain** and add `lee-river.com`, then `www.lee-river.com`.
    - Cloudflare replaces the existing proxied `A`/`AAAA` records for the root and `www` with Pages records. Accept the change. Email is unaffected: the Zoho `MX` and `TXT` records are separate.
 
-After that, every push to `main` redeploys automatically.
+## Branches
+
+- `main`: development. Pushes build a Cloudflare **preview** only (`https://main.widgets-4dn.pages.dev`).
+- `production`: the published site. Cloudflare's production branch is set to `production` (Settings → Builds & deployments → Branch control).
+
+To publish, merge `main` into `production`:
+
+```bash
+git checkout production && git merge --ff-only main && git push origin production && git checkout main
+```
 
 ### Updating the S&P data
 
 Add new month-end rows to the top of `src/data/sp500_monthly.csv`, then commit and push.
+
+### Updating the budget data
+
+Replace `data-src/US_budgets.xlsx` with the latest OMB Table 1.1 download, then run `python3 scripts/budgets_to_csv.py`. It uses the standard library only. Commit the regenerated CSV.

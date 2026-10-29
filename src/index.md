@@ -16,6 +16,10 @@ toc: false
     <h2>S&amp;P 500 Regression Trend Lines</h2>
     <p>Monthly S&amp;P 500 closes from 1928 to today, with linear, exponential, and log-quadratic trend lines fit from every start month. Compare fits and implied annual growth rates.</p>
   </a>
+  <a class="card widget" href="./deficits">
+    <h2>US Deficit Regression Trend Lines</h2>
+    <p>Federal deficits, spending and revenue from 1901 to 2025, fit with the same trend-line math as the S&amp;P 500, plus statistical tests of whether borrowing and the market move together.</p>
+  </a>
 </div>
 
 <style>

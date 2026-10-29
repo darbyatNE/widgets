@@ -7,6 +7,7 @@ export default {
   sidebar: false,
   footer: `© ${new Date().getFullYear()} Darby's Widgets · lee-river.com`,
   pages: [
-    {name: "S&P 500 Regression Lines", path: "/sp500"}
+    {name: "S&P 500 Regression Lines", path: "/sp500"},
+    {name: "US Deficit Regression Lines", path: "/deficits"}
   ]
 };

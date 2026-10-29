@@ -429,7 +429,7 @@ statisticalTests.content.replaceChildren(canLog
 <li><strong>Primary deficit</strong> is the deficit excluding actual interest paid (the same under both measures). It's held at the chosen % of GDP, and receipts stay at their FY2025 share of GDP for the "% of revenue" columns.</li>
 </ul>
 <p>The key condition: if the interest rate <em>r</em> exceeds nominal GDP growth <em>g</em>, debt compounds faster than the economy even with a balanced primary budget. If <em>r</em> &lt; <em>g</em>, a modest primary deficit can be stable.</p>
-<p>The dashed grey lines simply extend the exponential trend of interest % of GDP fitted from FY2000 and from FY2010. They are a mechanical extrapolation, not a forecast.</p>
+<p>The chart shows only your scenario (the red line), set with the inputs on the left. The defaults are r 4.7%, g 3.5% and a primary deficit of 2.5% of GDP. The preset scenarios (status quo, rates ease/rise, primary balance, faster growth) are compared in <em>View scenario details</em>.</p>
 <p>Caveats: actual outlays appear to be gross interest (including trust-fund interest). The Fed-rate measure assumes all debt reprices at the policy rate every year, while real debt reprices over several years. The cumulative deficit understates actual debt (it excludes off-budget borrowing and trust-fund holdings), so the effective rate here is interest ÷ that proxy. Treat the crossing years as orders of magnitude, not dates.</p>
 </div></details>
 </h2>
@@ -479,9 +479,9 @@ const crossYear = (rows, key, level) => String(rows.find((x) => x[key] >= level)
 ```js
 const scenPct = view(Inputs.form(
   {
-    r: Inputs.range([1, 8], {label: "Interest rate on debt (%)", step: 0.1, value: Math.round(base.r * 1000) / 10}),
-    g: Inputs.range([1, 8], {label: "Nominal GDP growth (%)", step: 0.1, value: 4}),
-    primary: Inputs.range([-3, 6], {label: "Primary deficit (% of GDP)", step: 0.1, value: Math.round(base.primary * 1000) / 10})
+    r: Inputs.range([1, 8], {label: "Interest rate on debt (%)", step: 0.1, value: 4.7}),
+    g: Inputs.range([1, 8], {label: "Nominal GDP growth (%)", step: 0.1, value: 3.5}),
+    primary: Inputs.range([-3, 6], {label: "Primary deficit (% of GDP)", step: 0.1, value: 2.5})
   },
   {template: (f) => html`<div class="range-form">${f.r}${f.g}${f.primary}</div>`}
 ));
@@ -537,13 +537,9 @@ const SCENARIOS = [
   {name: "Primary balance (0% GDP)", r: base.r, g: 0.04, primary: 0},
   {name: "Faster growth (g 5%)", r: base.r, g: 0.05, primary: base.primary}
 ].map((s) => ({...s, rows: project(s)}));
-const trendRows = [2000, 2010].flatMap((y0) => {
-  const f = fitTo(histI.filter((d) => d.year >= y0), FITS["Exponential (log-linear)"], histI[histI.length - 1].date);
-  return d3.range(base.year, HORIZON + 1).map((y) => ({year: y, interest: f.predict(fyEnd(y)), series: `Trend since FY${y0} (${d3.format("+.1%")(f.growthNow)}/yr)`}));
-});
-const projRows = SCENARIOS.flatMap((s) => [{year: base.year, interest: base.interest, series: s.name}, ...s.rows.map((x) => ({...x, series: s.name}))]);
-const yMax = Math.min(0.12, d3.max([...projRows, ...trendRows], (d) => d.interest) * 1.05);
-const names = SCENARIOS.map((s) => s.name);
+const projRows = SCENARIOS.filter((s) => s.name === "Your scenario").flatMap((s) => [{year: base.year, interest: base.interest, series: s.name}, ...s.rows.map((x) => ({...x, series: s.name}))]);
+const yMax = Math.min(0.25, Math.max(d3.max(projRows, (d) => d.interest), d3.max(histI, (d) => d.close), 0.06) * 1.05);
+const names = ["Your scenario"];
 ```
 
 ```js
@@ -554,17 +550,15 @@ display(Plot.plot({
   marginLeft: 60,
   y: {grid: true, label: "Interest (% of GDP)", domain: [0, yMax], tickFormat: (v) => d3.format(".1%")(v)},
   x: {label: "Fiscal year", tickFormat: "d"},
-  color: {legend: true, domain: ["History", ...names], range: ["#222", "#d62728", "#e8590c", "#2b8a3e", "#7048e8", "#1971c2", "#0c8599"]},
+  color: {legend: true, domain: ["History", ...names], range: ["#222", "#d62728"]},
   marks: [
     Plot.ruleY([0.05], {stroke: "#d62728", strokeDasharray: "2,3"}),
     Plot.text([{year: 1942, y: 0.05}], {x: "year", y: "y", text: () => `5% of GDP ≈ ${d3.format(".0%")(0.05 / base.receipts)} of revenue`, dy: -7, textAnchor: "start", fill: "#d62728"}),
     Plot.ruleY([0.25 * base.receipts], {stroke: "#9c36b5", strokeDasharray: "6,3"}),
     Plot.text([{year: 1942, y: 0.25 * base.receipts}], {x: "year", y: "y", text: () => `25% of revenue (crisis risk) ≈ ${d3.format(".2%")(0.25 * base.receipts)} of GDP`, dy: 9, textAnchor: "start", fill: "#9c36b5"}),
     Plot.ruleX([base.year], {stroke: "#aaa"}),
-    Plot.line(trendRows.filter((d) => d.interest <= yMax), {x: "year", y: "interest", z: "series", stroke: "#999", strokeDasharray: "5,4"}),
-    Plot.text(trendRows.filter((d) => d.interest <= yMax && d.year === Math.min(HORIZON, d3.max(trendRows.filter((t) => t.series === d.series && t.interest <= yMax), (t) => t.year))), {x: "year", y: "interest", text: "series", textAnchor: "end", dy: -6, fill: "#777", fontSize: 10}),
     Plot.line(histI, {x: "year", y: "close", stroke: () => "History", strokeWidth: 2}),
-    Plot.line(projRows.filter((d) => d.interest <= yMax), {x: "year", y: "interest", stroke: "series", z: "series", strokeWidth: (d) => (d.series === "Your scenario" ? 3 : 1.5), strokeDasharray: (d) => (d.series === "Your scenario" ? null : "6,3")}),
+    Plot.line(projRows.filter((d) => d.interest <= yMax), {x: "year", y: "interest", stroke: "series", z: "series", strokeWidth: 3}),
     Plot.tip([...histI.map((d) => ({year: d.year, interest: d.close, series: "History"})), ...projRows.filter((d) => d.interest <= yMax)], Plot.pointer({x: "year", y: "interest", title: (d) => `FY${d.year} — ${d.series}\nInterest: ${d3.format(".2%")(d.interest)} of GDP` + (d.debt ? `\nDebt: ${d3.format(".0%")(d.debt)} of GDP\nInterest/revenue: ${d3.format(".0%")(d.share)}` : "")}))
   ]
 }));

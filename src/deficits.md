@@ -463,6 +463,7 @@ const base = {
   receipts: last.receipts / last.gdp
 };
 const HORIZON = 2075;
+const DEFAULTS = {r: 0.047, g: 0.035, primary: 0.025};
 function project({r, g, primary}) {
   const rows = [];
   let d = base.debt;
@@ -479,9 +480,9 @@ const crossYear = (rows, key, level) => String(rows.find((x) => x[key] >= level)
 ```js
 const scenPct = view(Inputs.form(
   {
-    r: Inputs.range([1, 8], {label: "Interest rate on debt (%)", step: 0.1, value: 4.7}),
-    g: Inputs.range([1, 8], {label: "Nominal GDP growth (%)", step: 0.1, value: 3.5}),
-    primary: Inputs.range([-3, 6], {label: "Primary deficit (% of GDP)", step: 0.1, value: 2.5})
+    r: Inputs.range([1, 8], {label: "Interest rate on debt (%)", step: 0.1, value: DEFAULTS.r * 100}),
+    g: Inputs.range([1, 8], {label: "Nominal GDP growth (%)", step: 0.1, value: DEFAULTS.g * 100}),
+    primary: Inputs.range([-3, 6], {label: "Primary deficit (% of GDP)", step: 0.1, value: DEFAULTS.primary * 100})
   },
   {template: (f) => html`<div class="range-form">${f.r}${f.g}${f.primary}</div>`}
 ));
@@ -519,7 +520,7 @@ invalidation.then(() => thresholdDetails.dialog.close());
 display(html`<div class="ratio-guide">
   <h3>Interest ÷ revenue risk bands</h3>
   <table class="ratio-table"><tbody>${RATIO_BANDS.map((b) => html`<tr class=${b === nowBand ? "now" : ""}><td>${b.ratio}</td><td>${b.status}${b === nowBand ? html` <span class="here">◀ FY${base.year}: ${d3.format(".0%")(nowShare)}</span>` : ""}</td></tr>`)}</tbody></table>
-  <p class="crisis-note"><strong>Entering 25% crisis mode:</strong> your scenario <strong>${crisisYear("Your scenario")}</strong>; status quo <strong>${crisisYear("Status quo")}</strong>; rates rise ${crisisYear("Rates rise")}; rates ease ${crisisYear("Rates ease")}.${firstCrisis ? html` History: first reached in FY${firstCrisis.year} (${d3.format(".1%")(firstCrisis.share)}).` : ""}</p>
+  <p class="crisis-note"><strong>Entering 25% crisis mode:</strong> your scenario <strong>${crisisYear("Your scenario")}</strong>; rates rise ${crisisYear("Rates rise")}; rates ease ${crisisYear("Rates ease")}; primary balance ${crisisYear("Primary balance")}; faster growth ${crisisYear("Faster growth")}.${firstCrisis ? html` History: first reached in FY${firstCrisis.year} (${d3.format(".1%")(firstCrisis.share)}).` : ""}</p>
   ${thresholdDetails.element}
 </div>`);
 ```
@@ -531,11 +532,11 @@ display(html`<div class="ratio-guide">
 ```js
 const SCENARIOS = [
   {name: "Your scenario", r: scenPct.r / 100, g: scenPct.g / 100, primary: scenPct.primary / 100},
-  {name: `Status quo (r ${d3.format(".1%")(base.r)}, g 4%)`, r: base.r, g: 0.04, primary: base.primary},
-  {name: "Rates ease (r 3.5%)", r: 0.035, g: 0.04, primary: base.primary},
-  {name: "Rates rise (r 5.5%)", r: 0.055, g: 0.04, primary: base.primary},
-  {name: "Primary balance (0% GDP)", r: base.r, g: 0.04, primary: 0},
-  {name: "Faster growth (g 5%)", r: base.r, g: 0.05, primary: base.primary}
+  {name: "Status quo (r 4.7%, g 3.5%, primary 2.5%)", ...DEFAULTS},
+  {name: "Rates ease (r 3.5%)", ...DEFAULTS, r: 0.035},
+  {name: "Rates rise (r 5.5%)", ...DEFAULTS, r: 0.055},
+  {name: "Primary balance (0% GDP)", ...DEFAULTS, primary: 0},
+  {name: "Faster growth (g 5%)", ...DEFAULTS, g: 0.05}
 ].map((s) => ({...s, rows: project(s)}));
 const projRows = SCENARIOS.filter((s) => s.name === "Your scenario").flatMap((s) => [{year: base.year, interest: base.interest, series: s.name}, ...s.rows.map((x) => ({...x, series: s.name}))]);
 const yMax = Math.min(0.25, Math.max(d3.max(projRows, (d) => d.interest), d3.max(histI, (d) => d.close), 0.06) * 1.05);
@@ -597,7 +598,7 @@ Interest here is the default measure: **prior-year total (cumulative) deficit ×
 1. **No statistical link to stock returns.** Year-to-year changes in the interest burden are uncorrelated with S&P 500 returns at every lag from −2 to +2 years (r between −0.05 and +0.19, all p > 0.08). The burden level doesn't predict the next 10 years of S&P returns either (+0.13 pp/yr per 1 pp of GDP, p ≈ 0.9). The market hasn't priced the interest burden in any detectable way, under either measure.
 2. **The burden follows the Fed.** Priced at the policy rate, interest was 3.85% of GDP in FY1981 (Fed funds ~17%), fell to almost nothing in FY2009–2021 (0.05% in FY2014, 0.06% in FY2021), then jumped to a **record 4.33% of GDP in FY2024** as rates reached 5.3% on a much larger debt. It eased to 3.68% in FY2025 as the Fed cut. Its long-run trend (+1.6%/yr since FY2000) is far below the S&P's, and the post-2010 trend (+33%/yr) is a rebound from near-zero rates, not a sustainable growth rate.
 3. **Sustainability verdict: not sustainable.** The chart's default scenario assumes an average rate on the debt of **4.7%**, **3.5%** nominal GDP growth and a primary deficit of **2.5% of GDP**. *r* then exceeds *g* by 1.2 pp, and debt (the cumulative-deficit proxy, 89% of GDP in FY2025) passes **100% of GDP in 2029**, **191% by 2050** and about 327% by 2075. Interest reaches **25% of revenue (the "fiscal crisis risk" band) around 2028**, 5% of GDP around 2032 (≈ 30% of revenue around 2033), 6% around 2038, 40% of revenue around 2042 and half of all revenue around 2051. On the interest ÷ revenue scale, this measure already touched 25% in FY2024 (25.9%) before easing to about 22% in FY2025 as the Fed cut. Because the projection uses one fixed rate, the crossing years are the same under either interest measure.
-4. **Sensitivity (changing one assumption at a time from the defaults):** a rate of 5.5% brings 25% of revenue to 2026 and 5% of GDP to 2028. A rate of 3.5% (equal to growth) delays them to about 2041 and 2050. Closing the primary deficit to zero still crosses 25% of revenue around 2030 because *r* > *g*, but it slows the climb (5% of GDP in 2045, debt about 119% in 2050). Faster growth (5%) makes *r* < *g* and delays 5% of GDP to about 2037. Even a smaller 1.8% primary deficit only moves 5% of GDP to 2034. Only *r* ≤ *g* together with a small primary deficit, or a primary *surplus*, keeps the ratio from compounding. The preset scenarios in *View scenario details* still use the FY2025 starting values (Fed rate 4.4%, g 4%, primary deficit 1.8%).
+4. **Sensitivity (changing one assumption at a time from the defaults):** a rate of 5.5% brings 25% of revenue to 2026 and 5% of GDP to 2028. A rate of 3.5% (equal to growth) delays them to about 2041 and 2050. Closing the primary deficit to zero still crosses 25% of revenue around 2030 because *r* > *g*, but it slows the climb (5% of GDP in 2045, debt about 119% in 2050). Faster growth (5%) makes *r* < *g* and delays 5% of GDP to about 2037. Even a smaller 1.8% primary deficit only moves 5% of GDP to 2034. Only *r* ≤ *g* together with a small primary deficit, or a primary *surplus*, keeps the ratio from compounding. The same variations appear as preset scenarios in *View scenario details*.
 
 **Bottom line:** interest costs and stock prices have moved independently, so the S&P chart offers no early warning. On the default assumptions (4.7% rate, 3.5% growth, 2.5%-of-GDP primary deficit) the burden enters the **25%-of-revenue crisis band within about 3 years (≈ 2028)** and passes 5% of GDP within about 7 years (≈ 2032). The plausible range for the 25% mark is about 2026–2041, set mostly by the rate on the debt relative to growth.
 

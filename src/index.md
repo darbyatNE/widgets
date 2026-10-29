@@ -15,7 +15,6 @@ toc: false
   <a class="card widget" href="./sp500">
     <h2>S&amp;P 500 Regression Trend Lines</h2>
     <p>Monthly S&amp;P 500 closes from 1928 to today, with linear, exponential, and log-quadratic trend lines fit from every start month. Compare fits and implied annual growth rates.</p>
-    <span class="go">Open →</span>
   </a>
 </div>
 
@@ -47,10 +46,16 @@ a.widget {
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
   box-shadow: 0 8px 28px rgba(0, 0, 0, .45);
+  cursor: pointer;
+  -webkit-tap-highlight-color: rgba(92, 200, 255, .15);
+  touch-action: manipulation;
   transition: border-color .15s, transform .15s, box-shadow .15s;
 }
-a.widget:hover { border-color: var(--theme-foreground-focus); transform: translateY(-2px); box-shadow: 0 10px 34px rgba(0, 0, 0, .55), 0 0 0 1px rgba(92, 200, 255, .35); }
+/* Hover lift only on mouse devices so a phone tap navigates immediately. */
+@media (hover: hover) {
+  a.widget:hover { border-color: var(--theme-foreground-focus); transform: translateY(-2px); box-shadow: 0 10px 34px rgba(0, 0, 0, .55), 0 0 0 1px rgba(92, 200, 255, .35); }
+}
+a.widget:active { border-color: var(--theme-foreground-focus); transform: scale(.98); }
 a.widget h2 { margin-top: 0; color: #fff; }
-a.widget p { color: var(--theme-foreground-muted); }
-a.widget .go { color: var(--theme-foreground-focus); font-weight: 600; }
+a.widget p { color: var(--theme-foreground-muted); margin-bottom: 0; }
 </style>

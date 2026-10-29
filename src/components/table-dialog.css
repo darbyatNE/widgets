@@ -1,0 +1,19 @@
+.table-dialog-control { margin: 1rem 0; }
+.table-dialog {
+  box-sizing: border-box;
+  width: min(1200px, calc(100vw - 2rem));
+  max-width: calc(100vw - 2rem);
+  max-height: calc(100dvh - 2rem);
+  padding: 1rem;
+  color: var(--theme-foreground);
+  background: var(--theme-background);
+  border: 1px solid var(--theme-foreground-faintest);
+  border-radius: 8px;
+}
+.table-dialog::backdrop { background: rgb(0 0 0 / 45%); }
+.table-dialog-header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
+.table-dialog-header h2 { margin: 0; }
+.table-dialog-header form { flex-shrink: 0; }
+.table-dialog-content { max-height: 65dvh; overflow: auto; }
+.table-dialog-content table { width: max-content; min-width: 100%; table-layout: auto; }
+.table-dialog-content th, .table-dialog-content td { white-space: nowrap; }

@@ -5,6 +5,8 @@ toc: false
 
 <a href="./">← Darby's Widgets</a>
 
+<link rel="stylesheet" href="./components/table-dialog.css">
+
 <h1 class="title-row">US Deficit Regression Trend Lines
 <details class="info"><summary title="About this chart" aria-label="About this chart">i</summary><div class="info-body">
 <p>The same regression trend lines as the <a href="./sp500">S&amp;P 500 page</a>, applied to the federal budget from the overspending side. Data: OMB Historical Table 1.1, fiscal years 1901–2025, nominal dollars. Fiscal years ended June 30 through 1976 and September 30 since 1977.</p>
@@ -188,7 +190,14 @@ display(gRows.length ? Plot.plot({
 ```
 
 ```js
-display(Inputs.table(
+import {tableDialog} from "./components/table-dialog.js";
+const returnDetails = tableDialog({id: "return-details", title: "Return details", label: "View return details"});
+display(returnDetails.element);
+invalidation.then(() => returnDetails.dialog.close());
+```
+
+```js
+returnDetails.content.replaceChildren(Inputs.table(
   shown.map((r) => ({
     "Start FY": String(r.year),
     "Years": r.n,
@@ -199,7 +208,7 @@ display(Inputs.table(
     [`Fitted @ FY${endPoint.year}`]: spec.fmt(r.fittedEnd),
     "Actual vs fit": d3.format("+.1%")(endPoint.close / r.fittedEnd - 1)
   })),
-  {rows: 15}
+  {rows: 15, layout: "auto"}
 ));
 ```
 
@@ -273,6 +282,12 @@ display(canLog ? html`<p class="range-note">Both series use the ${cmpModel === m
 ```
 
 ```js
+const statisticalTests = tableDialog({id: "statistical-tests", title: "Statistical tests", label: "View statistical tests"});
+display(statisticalTests.element);
+invalidation.then(() => statisticalTests.dialog.close());
+```
+
+```js
 const fmtP = (p) => (p < 0.001 ? "<0.001" : p.toFixed(3));
 const verdict = (p, alpha = 0.05) => (p < alpha ? "Significant" : "Not significant");
 let statRows = [];
@@ -320,7 +335,9 @@ if (canLog) {
     });
   }
 }
-display(canLog ? Inputs.table(statRows, {select: false, rows: statRows.length + 1, layout: "auto"}) : "");
+statisticalTests.content.replaceChildren(canLog
+  ? Inputs.table(statRows, {select: false, rows: statRows.length + 1, layout: "auto"})
+  : html`<p>The statistical tests require positive values for log growth.</p>`);
 ```
 
 <h2 class="title-row">Is the interest burden sustainable?

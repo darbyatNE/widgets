@@ -229,7 +229,7 @@ display(gRows.length ? Plot.plot({
   width: growthSize.width,
   height: growthSize.height,
   marginLeft: 60,
-  y: {grid: true, label: "Annual growth (%/yr)", tickFormat: (v) => d3.format(".0%")(v)},
+  y: {grid: true, label: "Annual growth (%/yr)", tickFormat: (v) => d3.format(".1%")(v)},
   x: {label: "Regression start year", tickFormat: "d"},
   color: {legend: true, domain: [...new Set(gRows.map((d) => d.series))], range: ["#1f77b4", "#d62728"]},
   marks: [
@@ -331,7 +331,7 @@ display(canLog ? Plot.plot({
   width: cmpSize.width,
   height: cmpSize.height,
   marginLeft: 60,
-  y: {grid: true, label: `Trend growth, ${cmpMeasure.toLowerCase()} (%/yr)`, tickFormat: (v) => d3.format(".0%")(v)},
+  y: {grid: true, label: `Trend growth, ${cmpMeasure.toLowerCase()} (%/yr)`, tickFormat: (v) => d3.format(".1%")(v)},
   x: {label: "Regression start year", tickFormat: "d"},
   color: {legend: true, domain: [cmpName, "S&P 500"], range: ["#e8590c", "#2b8a3e"]},
   marks: [
@@ -496,7 +496,7 @@ display(Plot.plot({
   width: sustainSize.width,
   height: sustainSize.height,
   marginLeft: 60,
-  y: {grid: true, label: "Interest (% of GDP)", domain: [0, yMax], tickFormat: (v) => d3.format(".0%")(v)},
+  y: {grid: true, label: "Interest (% of GDP)", domain: [0, yMax], tickFormat: (v) => d3.format(".1%")(v)},
   x: {label: "Fiscal year", tickFormat: "d"},
   color: {legend: true, domain: ["Actual", ...names], range: ["#222", "#d62728", "#e8590c", "#2b8a3e", "#7048e8", "#1971c2", "#0c8599"]},
   marks: [

@@ -11,7 +11,7 @@ Static site for [lee-river.com](https://lee-river.com), built with [Observable F
 Shared code lives in `src/components/`: `regression.js` holds the trend-line fits used by both pages, and `stats.js` holds the significance tests (Newey-West OLS, correlation p-values, Engle-Granger).
 
 Data:
-- `src/data/sp500_monthly.csv` holds month-end S&P 500 closes from 1928 to the present, newest first. Columns are `date,close` with no header row.
+- `src/data/sp500_monthly.csv` holds month-end S&P 500 closes from 1928 to the present, newest first. Columns are `date,close` with no header row. The page charts data through `END_DATE` (Dec 31, 2025) in `src/sp500.md`; later rows are ignored.
 - `src/data/us_budgets.csv` holds federal receipts, outlays, deficit and cumulative deficit by fiscal year, in $ millions. It's generated from OMB Historical Table 1.1 (`data-src/US_budgets.xlsx`).
 
 ## Local development

@@ -145,7 +145,7 @@ display(html`<p class="range-note">${shown.length ? `${shown.length} regression 
 <p>Annual growth rate (% per year) implied by each selected regression, plotted by its start year. Each start year has two values taken from the same trend line:</p>
 <ul>
 <li><strong style="color:#1f77b4">Blue: average over window.</strong> The trend line's compound annual growth rate (CAGR) from its start year to FY2025.</li>
-<li><strong style="color:#d62728">Red: at latest.</strong> How steep the trend line is at FY2025, as % per year. This is the pace the trend is growing at today.</li>
+<li><strong style="color:#d62728">Red: at latest.</strong> How steep the trend line is at FY2025, as % per year. This is the pace the trend was growing at in FY2025.</li>
 </ul>
 <p><strong>Red above blue</strong> means borrowing/spending growth has been speeding up. <strong>Red below blue</strong> means it has been slowing down.</p>
 <p><em>Exponential</em> fits grow at a constant rate, so they show a single line. A <em>Linear</em> fit adds a fixed dollar amount per year, so its % rate falls as the level rises. Its average (CAGR) is shown only where the fitted line stays above zero.</p>

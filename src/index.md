@@ -14,7 +14,7 @@ toc: false
 <div class="grid grid-cols-2">
   <a class="card widget" href="./sp500">
     <h2>S&amp;P 500 Regression Trend Lines</h2>
-    <p>Monthly S&amp;P 500 closes from 1928 to today, with linear, exponential, and log-quadratic trend lines fit from every start month. Compare fits and implied annual growth rates.</p>
+    <p>Monthly S&amp;P 500 closes from 1928 through December 2025, with linear, exponential, and log-quadratic trend lines fit from every start month. Compare fits and implied annual growth rates.</p>
   </a>
   <a class="card widget" href="./deficits">
     <h2>US Deficit Regression Trend Lines</h2>

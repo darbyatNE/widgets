@@ -12,7 +12,7 @@ Shared code lives in `src/components/`: `regression.js` holds the trend-line fit
 
 Data:
 - `src/data/sp500_monthly.csv` holds month-end S&P 500 closes from 1928 to the present, newest first. Columns are `date,close` with no header row. The page charts data through `END_DATE` (Dec 31, 2025) in `src/sp500.md`; later rows are ignored.
-- `src/data/us_budgets.csv` holds federal receipts, outlays, deficit and cumulative deficit by fiscal year, in $ millions. It's generated from OMB Historical Table 1.1 (`data-src/US_budgets.xlsx`).
+- `src/data/us_budgets.csv` holds federal receipts, outlays, deficit and cumulative deficit by fiscal year, in $ millions. It's generated from OMB Historical Table 1.1 (`data-src/US_budgets.xlsx`). It also has `interest` ($ millions, FRED `FYOINT`, `data-src/FYOINT.csv`), `interest_pct_gdp` (FRED `FYOIGDA188S`, `data-src/FYOIGDA188S.xlsx`) and implied nominal `gdp` (interest ÷ share). These are blank before FY1940.
 
 ## Local development
 
@@ -59,4 +59,4 @@ Add new month-end rows to the top of `src/data/sp500_monthly.csv`, then commit a
 
 ### Updating the budget data
 
-Replace `data-src/US_budgets.xlsx` with the latest OMB Table 1.1 download, then run `python3 scripts/budgets_to_csv.py`. It uses the standard library only. Commit the regenerated CSV.
+Replace `data-src/US_budgets.xlsx` with the latest OMB Table 1.1 download (and `FYOINT.csv` / `FYOIGDA188S.xlsx` with fresh FRED downloads), then run `python3 scripts/budgets_to_csv.py`. It uses the standard library only. Commit the regenerated CSV.

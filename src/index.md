@@ -18,7 +18,7 @@ toc: false
   </a>
   <a class="card widget" href="./deficits">
     <h2>US Deficit Regression Trend Lines</h2>
-    <p>Federal deficits, spending and revenue from 1901 to 2025, fit with the same trend-line math as the S&amp;P 500, plus statistical tests of whether borrowing and the market move together.</p>
+    <p>Federal deficits, spending and revenue from 1901 to 2025, fit with the same trend-line math as the S&amp;P 500, plus interest as a share of GDP, tests of whether borrowing and the market move together, and a projection of whether the interest burden is sustainable.</p>
   </a>
 </div>
 

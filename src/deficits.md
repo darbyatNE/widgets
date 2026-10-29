@@ -495,6 +495,35 @@ const peakNote = base.interest > priorPeak.close
 display(html`<p class="range-note">FY${base.year} starting point (${isModel ? "total deficit × Fed rate" : "actual interest outlays"}): interest ${d3.format(".2%")(base.interest)} of GDP (${peakNote}), ${d3.format(".0%")(base.interest / base.receipts)} of revenue; debt proxy ${d3.format(".0%")(base.debt)} of GDP; ${isModel ? "Fed funds rate" : "effective rate"} ${d3.format(".2%")(base.r)}; primary deficit ${d3.format(".1%")(base.primary)} of GDP; receipts ${d3.format(".1%")(base.receipts)} of GDP.</p>`);
 ```
 
+```js
+const RATIO_BANDS = [
+  {lo: 0, hi: 0.10, ratio: "Below 10%", status: "Comfort zone / low risk", context: html`Standard level during low-interest regimes. Minimal strain on the primary budget.`},
+  {lo: 0.14, hi: 0.15, ratio: "14% – 15%", status: "Historical warning threshold", context: html`This was the peak reached in the <strong>early 1990s</strong> (specifically 1991), which prompted major bipartisan deficit-reduction efforts (e.g., Budget Enforcement Act).`},
+  {lo: 0.15, hi: 0.20, ratio: "15% – 20%", status: `Severe "crowding out" zone`, context: html`<strong>Current position (~18.5%–19%).</strong> At this level, interest servicing becomes one of the largest single budget items, surpassing defense and discretionary programs.`},
+  {lo: 0.20, hi: 0.25, ratio: "Above 20%", status: "Red flag / structural danger", context: html`Crossing 20% signals that 1 out of every 5 dollars collected in taxes pays for past debt rather than current public goods, raising severe fiscal sustainability questions.`},
+  {lo: 0.25, hi: Infinity, ratio: "25%+", status: "Fiscal crisis risk / rating downgrade", context: html`Sovereign credit rating agencies view 25%+ as a trigger for systematic downgrades and potential debt-trap dynamics without severe fiscal adjustment.`}
+];
+const CRISIS = 0.25;
+const nowShare = base.interest / base.receipts;
+const nowBand = RATIO_BANDS.findLast((b) => nowShare >= b.lo);
+const histShare = budget.filter((d) => d.receipts > 0).map((d) => ({year: d.year, share: (isModel ? d.model_interest : d.interest) / d.receipts})).filter((d) => d.share > 0);
+const firstCrisis = histShare.find((d) => d.share >= CRISIS);
+const crisisYear = (name) => crossYear(SCENARIOS.find((s) => s.name.startsWith(name)).rows, "share", CRISIS);
+const thresholdDetails = tableDialog({id: "threshold-details", title: "Interest ÷ revenue thresholds", label: "Threshold details"});
+thresholdDetails.content.replaceChildren(html`<table class="ratio-detail">
+  <thead><tr><th>Ratio (Interest / Revenue)</th><th>Status / Meaning</th><th>Historical & Practical Context</th></tr></thead>
+  <tbody>${RATIO_BANDS.map((b) => html`<tr class=${b === nowBand ? "now" : ""}><td><strong>${b.ratio}</strong></td><td><strong>${b.status}</strong></td><td>${b.context}</td></tr>`)}</tbody>
+</table>
+<p class="range-note">This page's FY${base.year} ratio is ${d3.format(".1%")(nowShare)} (${isModel ? "total deficit × Fed rate" : "actual interest outlays"} ÷ receipts). The ~18.5–19% "current position" refers to net interest, which excludes interest paid to federal trust funds; the actual-outlays series here is closer to gross interest, so it runs higher.</p>`);
+invalidation.then(() => thresholdDetails.dialog.close());
+display(html`<div class="ratio-guide">
+  <h3>Interest ÷ revenue risk bands</h3>
+  <table class="ratio-table"><tbody>${RATIO_BANDS.map((b) => html`<tr class=${b === nowBand ? "now" : ""}><td>${b.ratio}</td><td>${b.status}${b === nowBand ? html` <span class="here">◀ FY${base.year}: ${d3.format(".0%")(nowShare)}</span>` : ""}</td></tr>`)}</tbody></table>
+  <p class="crisis-note"><strong>Entering 25% crisis mode:</strong> your scenario <strong>${crisisYear("Your scenario")}</strong>; status quo <strong>${crisisYear("Status quo")}</strong>; rates rise ${crisisYear("Rates rise")}; rates ease ${crisisYear("Rates ease")}.${firstCrisis ? html` History: first reached in FY${firstCrisis.year} (${d3.format(".1%")(firstCrisis.share)}).` : ""}</p>
+  ${thresholdDetails.element}
+</div>`);
+```
+
 </aside>
 
 <div class="ws-main">
@@ -529,6 +558,8 @@ display(Plot.plot({
   marks: [
     Plot.ruleY([0.05], {stroke: "#d62728", strokeDasharray: "2,3"}),
     Plot.text([{year: 1942, y: 0.05}], {x: "year", y: "y", text: () => `5% of GDP ≈ ${d3.format(".0%")(0.05 / base.receipts)} of revenue`, dy: -7, textAnchor: "start", fill: "#d62728"}),
+    Plot.ruleY([0.25 * base.receipts], {stroke: "#9c36b5", strokeDasharray: "6,3"}),
+    Plot.text([{year: 1942, y: 0.25 * base.receipts}], {x: "year", y: "y", text: () => `25% of revenue (crisis risk) ≈ ${d3.format(".2%")(0.25 * base.receipts)} of GDP`, dy: 9, textAnchor: "start", fill: "#9c36b5"}),
     Plot.ruleX([base.year], {stroke: "#aaa"}),
     Plot.line(trendRows.filter((d) => d.interest <= yMax), {x: "year", y: "interest", z: "series", stroke: "#999", strokeDasharray: "5,4"}),
     Plot.text(trendRows.filter((d) => d.interest <= yMax && d.year === Math.min(HORIZON, d3.max(trendRows.filter((t) => t.series === d.series && t.interest <= yMax), (t) => t.year))), {x: "year", y: "interest", text: "series", textAnchor: "end", dy: -6, fill: "#777", fontSize: 10}),
@@ -555,6 +586,7 @@ scenarioDetails.content.replaceChildren(Inputs.table(SCENARIOS.map((s) => ({
   "Debt 2050": at(s.rows, 2050, "debt"),
   "Interest ≥ 5% GDP": crossYear(s.rows, "interest", 0.05),
   "≥ 6% GDP": crossYear(s.rows, "interest", 0.06),
+  "≥ 25% of revenue": crossYear(s.rows, "share", 0.25),
   "≥ 30% of revenue": crossYear(s.rows, "share", 0.3),
   "≥ 40% of revenue": crossYear(s.rows, "share", 0.4)
 })), {select: false, rows: SCENARIOS.length + 1, layout: "auto"}));
@@ -570,7 +602,7 @@ Interest here is the default measure: **prior-year total (cumulative) deficit ×
 
 1. **No statistical link to stock returns.** Year-to-year changes in the interest burden are uncorrelated with S&P 500 returns at every lag from −2 to +2 years (r between −0.05 and +0.19, all p > 0.08). The burden level doesn't predict the next 10 years of S&P returns either (+0.13 pp/yr per 1 pp of GDP, p ≈ 0.9). The market hasn't priced the interest burden in any detectable way, under either measure.
 2. **The burden follows the Fed.** Priced at the policy rate, interest was 3.85% of GDP in FY1981 (Fed funds ~17%), fell to almost nothing in FY2009–2021 (0.05% in FY2014, 0.06% in FY2021), then jumped to a **record 4.33% of GDP in FY2024** as rates reached 5.3% on a much larger debt. It eased to 3.68% in FY2025 as the Fed cut. Its long-run trend (+1.6%/yr since FY2000) is far below the S&P's, and the post-2010 trend (+33%/yr) is a rebound from near-zero rates, not a sustainable growth rate.
-3. **Sustainability verdict: not sustainable on the current path, but the clock depends on the Fed.** At the FY2025 Fed rate (4.4%), 4% nominal growth and a 1.8%-of-GDP primary deficit, *r* exceeds *g* by about 0.4 pp and debt reaches ~146% of GDP by 2050. Interest then crosses **5% of GDP around 2040** (≈ 30% of revenue around 2041) and **6% around 2050**. If the Fed holds rates at 5.5%, that comes by **about 2028**; at 3.5% (below growth), not until the 2070s.
+3. **Sustainability verdict: not sustainable on the current path, but the clock depends on the Fed.** At the FY2025 Fed rate (4.4%), 4% nominal growth and a 1.8%-of-GDP primary deficit, *r* exceeds *g* by about 0.4 pp and debt reaches ~146% of GDP by 2050. Interest then crosses **5% of GDP around 2040** (≈ 30% of revenue around 2041) and **6% around 2050**. If the Fed holds rates at 5.5%, that comes by **about 2028**; at 3.5% (below growth), not until the 2070s. On the interest ÷ revenue scale, this measure already touched the **25% "fiscal crisis risk" level in FY2024 (25.9%)** before easing to about 22% in FY2025. On the status-quo path it **re-enters 25%+ around 2032** (2026 if rates rise to 5.5%, about 2055 if they ease to 3.5%).
 4. **What stabilizes it:** with *r* this close to *g*, closing the primary deficit is enough. Interest levels off near 4.1% of GDP and debt near 100% through 2075. Faster growth (5%) pushes the 5% crossing out to about 2051.
 
 **Bottom line:** interest costs and stock prices have moved independently, so the S&P chart offers no early warning. Measured as total debt × the Fed rate, the burden is already at a record, and on today's settings it becomes the dominant budget pressure in roughly **15–25 years** (about 2040–2050). The range is 2028 to after 2070, set mostly by where the Fed holds rates.
@@ -580,7 +612,7 @@ Interest here is the default measure: **prior-year total (cumulative) deficit ×
 1. **No statistical link to stock returns.** Year-to-year changes in interest as a % of GDP are uncorrelated with S&P 500 returns at every lag from −2 to +2 years (r between 0.00 and +0.16, all p > 0.14). The burden level doesn't significantly predict the next 10 years of S&P returns either (p ≈ 0.2, with a slightly *positive* sign). Historically the market hasn't priced the interest burden in any detectable way.
 2. **The trends diverge sharply.** Over the whole period, interest % of GDP grew about 1%/yr while the S&P compounded at about 7.5%/yr. Interest roughly tracked the economy until 2000 and actually fell from 1980 to 2000. Since FY2010, though, it has grown about **+7.7%/yr faster than GDP** (±2.3 pp), and since FY2000 about +3.4%/yr. That kind of acceleration can't continue indefinitely for a ratio to GDP.
 3. **The burden is at a record.** FY2025 interest is 3.94% of GDP and about 23% of revenue, above the 1991 peak of 3.16%.
-4. **Sustainability verdict: not sustainable on the current path.** With today's effective rate (~4.7%), nominal growth of ~4% and a primary deficit of ~1.8% of GDP, *r* > *g* and the debt ratio keeps rising (to ~155% of GDP by 2050). Interest crosses **5% of GDP around 2035** (≈ 30% of revenue) and **6% around 2043**. The recent trend lines point sooner (5% by about 2029–2032), while easing rates (3.5%) push the 5% mark out to the 2070s. Rising rates (5.5%) bring it to about 2028.
+4. **Sustainability verdict: not sustainable on the current path.** With today's effective rate (~4.7%), nominal growth of ~4% and a primary deficit of ~1.8% of GDP, *r* > *g* and the debt ratio keeps rising (to ~155% of GDP by 2050). Interest crosses **5% of GDP around 2035** (≈ 30% of revenue) and **6% around 2043**. The recent trend lines point sooner (5% by about 2029–2032), while easing rates (3.5%) push the 5% mark out to the 2070s. Rising rates (5.5%) bring it to about 2028. Interest is already about 23% of revenue (the "red flag" band above 20%) and crosses the **25% "fiscal crisis risk" level around 2028** on the status-quo path.
 5. **What would stabilize it:** only *r* ≤ *g* plus a small primary deficit, or a primary *surplus* while *r* > *g*. Closing the primary deficit to zero slows the climb a lot (4.3% of GDP in 2035, 4.8% in 2050, debt about 106%), but 5% still arrives around 2057. Faster growth alone (5%) delays the 5% crossing to about 2041.
 
 **Bottom line:** interest costs and stock prices have moved independently, so the S&P chart offers no early warning. The arithmetic of debt does: unless rates fall below growth or the primary deficit closes, interest becomes the dominant budget pressure within roughly **10–20 years** (mid-2030s to mid-2040s), with a realistic range of about 2028–2075 depending mainly on interest rates.
@@ -629,4 +661,17 @@ details.info .info-body p, details.info .info-body ul { max-width: none; }
 .range-note { color: var(--theme-foreground-muted); margin: .25rem 0 0; }
 details.earlier { margin-top: 1.5rem; }
 details.earlier > summary { cursor: pointer; font-weight: 600; }
+.ratio-guide { margin-top: .6rem; font-size: .8rem; line-height: 1.35; }
+.ratio-guide h3 { margin: 0 0 .25rem; font-size: .85rem; }
+.ratio-table { width: 100%; border-collapse: collapse; }
+.ratio-table td { padding: .12rem .3rem; border-bottom: 1px solid var(--theme-foreground-faintest); vertical-align: top; }
+.ratio-table td:first-child { white-space: nowrap; font-weight: 600; }
+.ratio-table tr.now td, .ratio-detail tr.now td { background: color-mix(in srgb, #d62728 12%, transparent); }
+.ratio-table .here { color: #d62728; font-weight: 600; white-space: nowrap; }
+.ratio-guide .crisis-note { margin: .35rem 0; max-width: none; }
+.ratio-guide .table-dialog-control button { font-size: .8rem; }
+.ratio-detail { border-collapse: collapse; font-size: .9rem; }
+.table-dialog-content table.ratio-detail { width: 100%; }
+.ratio-detail th, .ratio-detail td { padding: .35rem .5rem; border-bottom: 1px solid var(--theme-foreground-faintest); text-align: left; vertical-align: top; }
+.ratio-detail td:nth-child(3) { min-width: 18rem; white-space: normal; }
 </style>

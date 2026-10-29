@@ -3,9 +3,14 @@ title: US Deficit Regression Trend Lines
 toc: false
 ---
 
-<a href="./">← Darby's Widgets</a>
-
 <link rel="stylesheet" href="./components/table-dialog.css">
+<link rel="stylesheet" href="./components/workspace.css">
+
+<div class="workspace" data-view="trend">
+
+<header class="ws-head">
+<div class="ws-title">
+<div class="ws-back"><a href="./">← Darby's Widgets</a></div>
 
 <h1 class="title-row">US Deficit Regression Trend Lines
 <details class="info"><summary title="About this chart" aria-label="About this chart">i</summary><div class="info-body">
@@ -19,6 +24,23 @@ toc: false
 <p>Each line is a least-squares fit from its <strong>start year</strong> through FY2025. Fit types and growth math are identical to the S&amp;P page.</p>
 </div></details>
 </h1>
+</div>
+<div class="ws-nav">
+
+```js
+import {viewTabs, observeViewport, chartSize} from "./components/workspace.js";
+const vp = Generators.observe(observeViewport);
+display(viewTabs([
+  {id: "trend", label: "Trend lines"},
+  {id: "growth", label: "Growth rates"},
+  {id: "compare", label: "S&P comparison"},
+  {id: "sustain", label: "Sustainability"},
+  {id: "conclusions", label: "Conclusions"}
+], {label: "Budget views", invalidation}));
+```
+
+</div>
+</header>
 
 ```js
 import {FITS, fit as fitTo} from "./components/regression.js";
@@ -81,10 +103,61 @@ const shown = regressions.filter((r) => r.year >= range.from && r.year <= range.
 const useLogAxis = logScale && spec.positive;
 const curveOf = (r) => (useLogAxis ? r.curve.filter((c) => c.value > 0) : r.curve);
 const yVals = data.map((d) => d.close);
+```
 
+<div class="ws-body">
+
+<aside class="ws-rail" aria-label="Trend line inputs">
+
+```js
+const seriesName = view(Inputs.radio(Object.keys(SERIES), {label: "Series", value: "Cumulative deficit"}));
+```
+
+```js
+// Log fits need positive values, so the annual deficit (negative in surplus years) is linear only.
+const fitType = view(Inputs.radio(
+  SERIES[seriesName].positive ? Object.keys(FITS) : ["Linear"],
+  {label: "Fit type", value: SERIES[seriesName].positive ? "Log-quadratic (changing growth rate)" : "Linear"}
+));
+```
+
+```js
+const seriesRows = seriesData(seriesName);
+const startYears = seriesRows.slice(0, seriesRows.length - MIN_POINTS + 1).map((d) => d.year);
+const range = view(Inputs.form(
+  {
+    from: Inputs.select(startYears, {label: "First start", value: startYears[0], format: String}),
+    to: Inputs.select(startYears, {label: "Last start", value: startYears[startYears.length - 1], format: String}),
+    freq: Inputs.radio(["Every year", "Every 5 years", "Every 10 years"], {label: "Start", value: "Every year"})
+  },
+  {template: (f) => html`<div class="range-form">${f.from}${f.to}${f.freq}</div>`}
+));
+```
+
+```js
+display(html`<p class="range-note">${shown.length ? `${shown.length} regression line${shown.length === 1 ? "" : "s"} drawn.` : "No lines in this range. The first start must be on or before the last start."}</p>`);
+```
+
+</aside>
+
+<section class="view-panel" id="panel-trend" role="tabpanel" aria-labelledby="tab-trend">
+
+<div class="ws-bar">
+
+```js
+const logScale = view(Inputs.toggle({label: "Log y-axis", value: true, disabled: !SERIES[seriesName].positive}));
+const showActual = view(Inputs.toggle({label: "Show actual values", value: true}));
+```
+
+<span>Latest: **FY${endPoint.year} ${seriesName.toLowerCase()} — ${spec.fmt(endPoint.close)}**</span>
+
+</div>
+
+```js
+const trendSize = chartSize(vp, width, {rail: true, reserve: 187, min: 260, mobile: 380});
 display(Plot.plot({
-  width,
-  height: 560,
+  width: trendSize.width,
+  height: trendSize.height,
   marginLeft: 70,
   y: {
     type: useLogAxis ? "log" : "linear",
@@ -115,42 +188,11 @@ display(Plot.plot({
 }));
 ```
 
-Latest: **FY${endPoint.year} ${seriesName.toLowerCase()} — ${spec.fmt(endPoint.close)}**
+</section>
 
-<div class="chart-controls">
+<section class="view-panel" id="panel-growth" role="tabpanel" aria-labelledby="tab-growth" hidden>
 
-```js
-const seriesName = view(Inputs.radio(Object.keys(SERIES), {label: "Series", value: "Cumulative deficit"}));
-```
-
-```js
-// Log fits need positive values, so the annual deficit (negative in surplus years) is linear only.
-const fitType = view(Inputs.radio(
-  SERIES[seriesName].positive ? Object.keys(FITS) : ["Linear"],
-  {label: "Fit type", value: SERIES[seriesName].positive ? "Log-quadratic (changing growth rate)" : "Linear"}
-));
-const logScale = view(Inputs.toggle({label: "Log y-axis", value: true, disabled: !SERIES[seriesName].positive}));
-const showActual = view(Inputs.toggle({label: "Show actual values", value: true}));
-```
-
-```js
-const seriesRows = seriesData(seriesName);
-const startYears = seriesRows.slice(0, seriesRows.length - MIN_POINTS + 1).map((d) => d.year);
-const range = view(Inputs.form(
-  {
-    from: Inputs.select(startYears, {label: "First start", value: startYears[0], format: String}),
-    to: Inputs.select(startYears, {label: "Last start", value: startYears[startYears.length - 1], format: String}),
-    freq: Inputs.radio(["Every year", "Every 5 years", "Every 10 years"], {label: "Start", value: "Every year"})
-  },
-  {template: (f) => html`<div class="range-form">${f.from}${f.to}${f.freq}</div>`}
-));
-```
-
-</div>
-
-```js
-display(html`<p class="range-note">${shown.length ? `${shown.length} regression line${shown.length === 1 ? "" : "s"} drawn.` : "No lines in this range. The first start must be on or before the last start."}</p>`);
-```
+<div class="ws-bar">
 
 <h2 class="title-row">Growth rates — ${seriesName}, ${fitType}
 <details class="info"><summary title="About this chart" aria-label="About this chart">i</summary><div class="info-body">
@@ -165,6 +207,16 @@ display(html`<p class="range-note">${shown.length ? `${shown.length} regression 
 </h2>
 
 ```js
+import {tableDialog} from "./components/table-dialog.js";
+const returnDetails = tableDialog({id: "return-details", title: "Return details", label: "View return details"});
+display(returnDetails.element);
+invalidation.then(() => returnDetails.dialog.close());
+```
+
+</div>
+
+```js
+const growthSize = chartSize(vp, width, {rail: true, reserve: 177, min: 240, mobile: 340});
 const gRows = shown.flatMap((r) =>
   isCurvedRate
     ? [
@@ -174,8 +226,8 @@ const gRows = shown.flatMap((r) =>
     : [{year: r.year, g: r.slopePerYear, series: "Constant rate"}]
 ).filter((d) => isFinite(d.g));
 display(gRows.length ? Plot.plot({
-  width,
-  height: 380,
+  width: growthSize.width,
+  height: growthSize.height,
   marginLeft: 60,
   y: {grid: true, label: "Annual growth (%/yr)", tickFormat: (v) => d3.format(".0%")(v)},
   x: {label: "Regression start year", tickFormat: "d"},
@@ -189,12 +241,7 @@ display(gRows.length ? Plot.plot({
 }) : html`<p><em>No growth rates to show for this selection.</em></p>`);
 ```
 
-```js
-import {tableDialog} from "./components/table-dialog.js";
-const returnDetails = tableDialog({id: "return-details", title: "Return details", label: "View return details"});
-display(returnDetails.element);
-invalidation.then(() => returnDetails.dialog.close());
-```
+</section>
 
 ```js
 returnDetails.content.replaceChildren(Inputs.table(
@@ -211,6 +258,10 @@ returnDetails.content.replaceChildren(Inputs.table(
   {rows: 15, layout: "auto"}
 ));
 ```
+
+<section class="view-panel" id="panel-compare" role="tabpanel" aria-labelledby="tab-compare" hidden>
+
+<div class="ws-bar">
 
 <h2 class="title-row">${cmpName} vs. S&amp;P 500 — is the relationship significant?
 <details class="info"><summary title="About these tests" aria-label="About these tests">i</summary><div class="info-body">
@@ -229,6 +280,24 @@ returnDetails.content.replaceChildren(Inputs.table(
 </h2>
 
 ```js
+const cmpName = view(Inputs.select(
+  Object.keys(SERIES).filter((k) => SERIES[k].positive),
+  {label: "Compare S&P 500 with", value: "Interest (% of GDP)"}
+));
+const cmpMeasure = view(Inputs.radio(["Average over window", "At latest"], {label: "Growth measure", value: "Average over window"}));
+```
+
+```js
+const statisticalTests = tableDialog({id: "statistical-tests", title: "Statistical tests", label: "View statistical tests"});
+display(statisticalTests.element);
+invalidation.then(() => statisticalTests.dialog.close());
+```
+
+<button type="button" data-goto="trend" title="The fit type is set in the Trend lines view">Fit: change in Trend lines</button>
+
+</div>
+
+```js
 const spRaw = await FileAttachment("data/sp500_monthly.csv").text();
 const spByMonth = new Map(
   d3.csvParseRows(spRaw)
@@ -238,14 +307,6 @@ const spByMonth = new Map(
 const spFY = budget
   .map((d) => ({year: d.year, date: d.date, close: spByMonth.get(d3.timeFormat("%Y-%m")(d.date))}))
   .filter((d) => isFinite(d.close));
-```
-
-```js
-const cmpName = view(Inputs.select(
-  Object.keys(SERIES).filter((k) => SERIES[k].positive),
-  {label: "Compare S&P 500 with", value: "Interest (% of GDP)"}
-));
-const cmpMeasure = view(Inputs.radio(["Average over window", "At latest"], {label: "Growth measure", value: "Average over window"}));
 ```
 
 ```js
@@ -265,9 +326,10 @@ for (let i = 0; i + MIN_CMP <= bud.length; i++) {
   const pick = (f) => (cmpMeasure === "At latest" ? f.growthNow : f.avgGrowth);
   cmpRows.push({year: bud[i].year, g: pick(fb), series: cmpName}, {year: sp[i].year, g: pick(fs), series: "S&P 500"});
 }
+const cmpSize = chartSize(vp, width, {reserve: 238, min: 240, mobile: 340});
 display(canLog ? Plot.plot({
-  width,
-  height: 380,
+  width: cmpSize.width,
+  height: cmpSize.height,
   marginLeft: 60,
   y: {grid: true, label: `Trend growth, ${cmpMeasure.toLowerCase()} (%/yr)`, tickFormat: (v) => d3.format(".0%")(v)},
   x: {label: "Regression start year", tickFormat: "d"},
@@ -279,12 +341,6 @@ display(canLog ? Plot.plot({
   ]
 }) : html`<p><em>The comparison uses log growth, which needs positive values.</em></p>`);
 display(canLog ? html`<p class="range-note">Both series use the ${cmpModel === model ? fitType : "Log-quadratic (changing growth rate)"} fit through FY${bud[bud.length - 1].year}. Start years run FY${bud[0].year}–FY${bud[bud.length - MIN_CMP].year}, so each line spans at least ${MIN_CMP} years.</p>` : "");
-```
-
-```js
-const statisticalTests = tableDialog({id: "statistical-tests", title: "Statistical tests", label: "View statistical tests"});
-display(statisticalTests.element);
-invalidation.then(() => statisticalTests.dialog.close());
 ```
 
 ```js
@@ -340,6 +396,12 @@ statisticalTests.content.replaceChildren(canLog
   : html`<p>The statistical tests require positive values for log growth.</p>`);
 ```
 
+</section>
+
+<section class="view-panel" id="panel-sustain" role="tabpanel" aria-labelledby="tab-sustain" hidden>
+
+<div class="ws-bar">
+
 <h2 class="title-row">Is the interest burden sustainable?
 <details class="info"><summary title="About the projection" aria-label="About the projection">i</summary><div class="info-body">
 <p>A standard debt-dynamics projection, starting from FY2025 actuals in this data set:</p>
@@ -353,6 +415,18 @@ statisticalTests.content.replaceChildren(canLog
 <p>Caveats: the interest series appears to be gross interest (including trust-fund interest). The cumulative deficit understates actual debt (it excludes off-budget borrowing and trust-fund holdings), so the effective rate here is interest ÷ that proxy. Treat the crossing years as orders of magnitude, not dates.</p>
 </div></details>
 </h2>
+
+```js
+const scenarioDetails = tableDialog({id: "scenario-details", title: "Scenario details", label: "View scenario details"});
+display(scenarioDetails.element);
+invalidation.then(() => scenarioDetails.dialog.close());
+```
+
+</div>
+
+<div class="ws-split">
+
+<aside class="ws-side" aria-label="Scenario inputs">
 
 ```js
 const last = budget[budget.length - 1], prev = budget[budget.length - 2];
@@ -378,8 +452,6 @@ function project({r, g, primary}) {
 const crossYear = (rows, key, level) => String(rows.find((x) => x[key] >= level)?.year ?? `after ${HORIZON}`);
 ```
 
-<div class="chart-controls">
-
 ```js
 const scenPct = view(Inputs.form(
   {
@@ -391,7 +463,13 @@ const scenPct = view(Inputs.form(
 ));
 ```
 
-</div>
+```js
+display(html`<p class="range-note">FY${base.year} starting point: interest ${d3.format(".2%")(base.interest)} of GDP (a record; the prior peak was 3.16% in FY1991), ${d3.format(".0%")(last.interest / last.receipts)} of revenue; debt proxy ${d3.format(".0%")(base.debt)} of GDP; effective rate ${d3.format(".2%")(base.r)}; primary deficit ${d3.format(".1%")(base.primary)} of GDP; receipts ${d3.format(".1%")(base.receipts)} of GDP.</p>`);
+```
+
+</aside>
+
+<div class="ws-main">
 
 ```js
 const SCENARIOS = [
@@ -410,9 +488,13 @@ const trendRows = [2000, 2010].flatMap((y0) => {
 const projRows = SCENARIOS.flatMap((s) => [{year: base.year, interest: base.interest, series: s.name}, ...s.rows.map((x) => ({...x, series: s.name}))]);
 const yMax = Math.min(0.12, d3.max([...projRows, ...trendRows], (d) => d.interest) * 1.05);
 const names = SCENARIOS.map((s) => s.name);
+```
+
+```js
+const sustainSize = chartSize(vp, width, {rail: true, reserve: 150, min: 260, mobile: 400});
 display(Plot.plot({
-  width,
-  height: 440,
+  width: sustainSize.width,
+  height: sustainSize.height,
   marginLeft: 60,
   y: {grid: true, label: "Interest (% of GDP)", domain: [0, yMax], tickFormat: (v) => d3.format(".0%")(v)},
   x: {label: "Fiscal year", tickFormat: "d"},
@@ -428,8 +510,17 @@ display(Plot.plot({
     Plot.tip([...histI.map((d) => ({year: d.year, interest: d.close, series: "Actual"})), ...projRows.filter((d) => d.interest <= yMax)], Plot.pointer({x: "year", y: "interest", title: (d) => `FY${d.year} — ${d.series}\nInterest: ${d3.format(".2%")(d.interest)} of GDP` + (d.debt ? `\nDebt: ${d3.format(".0%")(d.debt)} of GDP\nInterest/revenue: ${d3.format(".0%")(d.share)}` : "")}))
   ]
 }));
+```
+
+</div>
+
+</div>
+
+</section>
+
+```js
 const at = (rows, y, k) => d3.format(k === "debt" ? ".0%" : ".2%")(rows.find((x) => x.year === y)[k]);
-display(Inputs.table(SCENARIOS.map((s) => ({
+scenarioDetails.content.replaceChildren(Inputs.table(SCENARIOS.map((s) => ({
   Scenario: s.name,
   "r − g": d3.format("+.1f")(100 * (s.r - s.g)) + " pp",
   "Interest 2035": at(s.rows, 2035, "interest"),
@@ -440,8 +531,11 @@ display(Inputs.table(SCENARIOS.map((s) => ({
   "≥ 30% of revenue": crossYear(s.rows, "share", 0.3),
   "≥ 40% of revenue": crossYear(s.rows, "share", 0.4)
 })), {select: false, rows: SCENARIOS.length + 1, layout: "auto"}));
-display(html`<p class="range-note">FY${base.year} starting point: interest ${d3.format(".2%")(base.interest)} of GDP (a record; the prior peak was 3.16% in FY1991), ${d3.format(".0%")(last.interest / last.receipts)} of revenue; debt proxy ${d3.format(".0%")(base.debt)} of GDP; effective rate ${d3.format(".2%")(base.r)}; primary deficit ${d3.format(".1%")(base.primary)} of GDP; receipts ${d3.format(".1%")(base.receipts)} of GDP.</p>`);
 ```
+
+<section class="view-panel" id="panel-conclusions" role="tabpanel" aria-labelledby="tab-conclusions" hidden>
+
+<div class="conclusions" role="region" aria-label="Conclusions" tabindex="0">
 
 ### Conclusions — interest burden vs. S&P 500 (FY1940–FY2025)
 
@@ -465,6 +559,14 @@ display(html`<p class="range-note">FY${base.year} starting point: interest ${d3.
 **Bottom line:** the two charts look alike because both compound with the nominal economy, at nearly the same long-run rate. There's no statistically robust evidence that deficits and stock returns move together year to year. The one significant divergence is the post-2000 period, when borrowing has grown faster than the market. Choose another series above to rerun the tests live.
 
 </details>
+
+</div>
+
+</section>
+
+</div>
+
+</div>
 
 <style>
 .title-row { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap; position: relative; max-width: none; }

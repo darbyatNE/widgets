@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "observable preview",
     "build": "observable build",
-    "clean": "rimraf src/.observablehq/cache dist"
+    "clean": "rimraf src/.observablehq/cache dist",
+    "test": "node --test"
   },
   "dependencies": {
     "@observablehq/framework": "^1.13.4"

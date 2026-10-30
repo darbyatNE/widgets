@@ -8,6 +8,7 @@ export default {
   footer: `© ${new Date().getFullYear()} Darby's Widgets · lee-river.com`,
   pages: [
     {name: "S&P 500 Regression Lines", path: "/sp500"},
-    {name: "US Deficit Regression Lines", path: "/deficits"}
+    {name: "US Deficit Regression Lines", path: "/deficits"},
+    {name: "TapIt — Reaction Game", path: "/tapit"}
   ]
 };

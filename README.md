@@ -7,8 +7,13 @@ Static site for [lee-river.com](https://lee-river.com), built with [Observable F
 | Homepage | `/` | `src/index.md` |
 | S&P 500 Regression Trend Lines | `/sp500` | `src/sp500.md` |
 | US Deficit Regression Trend Lines | `/deficits` | `src/deficits.md` |
+| TapIt — Reaction Game | `/tapit` | `src/tapit.md` |
 
 Shared code lives in `src/components/`: `regression.js` holds the trend-line fits used by both pages, and `stats.js` holds the significance tests (Newey-West OLS, correlation p-values, Engle-Granger).
+
+TapIt is a 20-second reaction game with a 3-second countdown. Lit squares score +1 when tapped; tapping a dark square scores −1, while missed targets carry no penalty. Its timing and scoring engine is `src/components/tapit-engine.js`; run the focused deterministic tests with `node --test tests/tapit-engine.test.js`.
+
+The 4×10 square field fits the viewport without scrolling. Short landscape screens move controls and concise rules into side rails, hide ornamental notes, and use nearly the full height for targets. Ten square rows inherently limit touch-target size on short screens (about 34px at 812×375); a visible note recommends portrait for larger targets without blocking play or keyboard access.
 
 ### Chart page layout
 

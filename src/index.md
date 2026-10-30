@@ -20,6 +20,10 @@ toc: false
     <h2>US Deficit Regression Trend Lines</h2>
     <p>Federal deficits, spending and revenue from 1901 to 2025, fit with the same trend-line math as the S&amp;P 500, plus interest as a share of GDP, tests of whether borrowing and the market move together, and a projection of whether the interest burden is sustainable.</p>
   </a>
+  <a class="card widget tapit-widget" href="./tapit">
+    <h2>TapIt — Reaction Game</h2>
+    <p>A quick 20-second test of focus and reflexes. Tap the illuminated squares, avoid the dark ones, and see how many points you can score.</p>
+  </a>
 </div>
 
 <style>
@@ -62,4 +66,6 @@ a.widget {
 a.widget:active { border-color: var(--theme-foreground-focus); transform: scale(.98); }
 a.widget h2 { margin-top: 0; color: #fff; }
 a.widget p { color: var(--theme-foreground-muted); margin-bottom: 0; }
+.tapit-widget { border-color: rgba(193, 255, 104, .4) !important; }
+.tapit-widget h2::after { content: "  ↗"; color: #c1ff68; font-size: .75em; }
 </style>

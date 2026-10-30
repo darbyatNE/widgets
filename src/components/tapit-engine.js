@@ -26,7 +26,7 @@ export function createTapItGame({
   let countdown = 0;
   let startAt = 0;
   let roundDeadline = 0;
-  let message = "Five rounds. Tap green for points; olive costs points.";
+  let message = "Five rounds. Tap green for points; olive targets cost points.";
   let generation = 0;
   let disposed = false;
   let roundFinalized = false;
@@ -241,13 +241,10 @@ export function createTapItGame({
         return {kind: "target", type: target.type, value};
       }
       markExpired(tile, generation);
-      score -= 1;
       publish();
-      return {kind: "empty", value: -1};
+      return {kind: "empty", value: 0};
     }
-    score -= 1;
-    publish();
-    return {kind: "empty", value: -1};
+    return {kind: "empty", value: 0};
   }
 
   function endWhenHidden() {

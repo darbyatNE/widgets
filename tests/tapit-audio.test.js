@@ -68,6 +68,17 @@ test("muting stops tones already playing", async () => {
   audio.dispose();
 });
 
+test("score-neutral empty-square misses still play the buzzer tone", async () => {
+  const context = new FakeAudioContext();
+  const audio = createTapItAudio({contextFactory: () => context});
+  await audio.prepare();
+  audio.play({kind: "empty", value: 0});
+  assert.equal(context.oscillators.length, 1);
+  assert.equal(context.oscillators[0].type, "square");
+  assert.equal(context.oscillators[0].frequency.value, 138);
+  audio.dispose();
+});
+
 test("disposing during audio preparation prevents resumed playback or context recreation", async () => {
   const context = new FakeAudioContext();
   let releaseResume;

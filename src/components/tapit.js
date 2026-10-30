@@ -53,7 +53,7 @@ export function mountTapIt(root, {invalidation} = {}) {
           <div class="tapit-overlay-panel">
             <span class="tapit-overlay-kicker" data-overlay-label>FIVE-ROUND REACTION TEST</span>
             <strong data-overlay-title>Ready?</strong>
-            <p data-overlay-copy>Green earns points. Olive loses points. Missed targets are free; dark squares cost one.</p>
+            <p data-overlay-copy>Green earns points. Olive targets lose points. Expired targets are free; dark squares trigger a miss tone but do not change your score.</p>
             <ol class="tapit-results" data-round-scores hidden></ol>
             <button type="button" class="tapit-action" data-action>Start game</button>
           </div>
@@ -68,7 +68,7 @@ export function mountTapIt(root, {invalidation} = {}) {
     </section>
 
     <footer class="tapit-footer">
-      <div class="tapit-footer-rules"><span>Green: gain</span><b>·</b><span>olive: lose</span><b>·</b><span>expired: free</span><b>·</b><span>empty: −1</span></div>
+      <div class="tapit-footer-rules"><span>Green: gain</span><b>·</b><span>olive: lose</span><b>·</b><span>expired: free</span><b>·</b><span>dark: miss, no score</span></div>
       <ul class="tapit-legend" aria-label="Target point values">
         <li><i class="swatch-light-green"></i><span>light green <b>+1</b></span></li>
         <li><i class="swatch-deep-green"></i><span>deep green <b>+2</b></span></li>
@@ -76,7 +76,7 @@ export function mountTapIt(root, {invalidation} = {}) {
         <li><i class="swatch-deep-olive"></i><span>deep olive <b>−2</b></span></li>
       </ul>
       <span class="tapit-sound-note" data-sound-note hidden role="status"></span>
-      <span class="tapit-rotate-note">Short screen? Rotate to portrait for larger targets. Keyboard play is available.</span>
+      <span class="tapit-rotate-note">Portrait gives you larger targets, but landscape works too. Keyboard play is available.</span>
     </footer>
   `;
 
@@ -133,7 +133,23 @@ export function mountTapIt(root, {invalidation} = {}) {
     button.dataset.tile = String(index);
     button.setAttribute("aria-label", `Square ${index + 1}, not lit`);
     button.setAttribute("aria-pressed", "false");
-    button.addEventListener("click", () => audio.play(game.hit(index)));
+    let touchHandled = false;
+    button.addEventListener("pointerdown", (event) => {
+      if (event.pointerType !== "touch") {
+        touchHandled = false;
+        return;
+      }
+      touchHandled = true;
+      button.focus({preventScroll: true});
+      audio.play(game.hit(index));
+    });
+    button.addEventListener("click", (event) => {
+      if (touchHandled && (event.detail > 0 || event.pointerType === "touch")) {
+        touchHandled = false;
+        return;
+      }
+      audio.play(game.hit(index));
+    });
     grid.append(button);
     return button;
   });
@@ -207,7 +223,7 @@ export function mountTapIt(root, {invalidation} = {}) {
     } else {
       overlayLabel.textContent = "FIVE-ROUND REACTION TEST";
       overlayTitle.textContent = "Ready?";
-      overlayCopy.textContent = "Green earns points. Olive loses points. Missed targets are free; dark squares cost one.";
+      overlayCopy.textContent = "Green earns points. Olive targets lose points. Expired targets are free; dark squares trigger a miss tone but do not change your score.";
       action.textContent = "Start game";
     }
   }

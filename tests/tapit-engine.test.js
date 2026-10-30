@@ -90,6 +90,9 @@ test("each of the four randomly assigned target types applies its signed value",
     assert.equal(game.getState().score, value);
     assert.equal(game.getState().totalScore, value);
     assert.equal(game.getState().targets.length, 0);
+    assert.deepEqual(game.hit(target.tile), {kind: "empty", value: 0});
+    assert.equal(game.getState().score, value);
+    assert.equal(game.getState().totalScore, value);
     game.dispose();
   }
 });
@@ -123,7 +126,7 @@ test("five completed rounds retain individual and cumulative scores", () => {
   game.dispose();
 });
 
-test("target expiry itself is free, but tapping the expired square costs one point", () => {
+test("target expiry and taps on expired or unlit squares never change the score", () => {
   for (const typeRandom of [0, .26, .51, .76]) {
     const values = [0, typeRandom, .999];
     const {clock, game} = createHarness({random: () => values.shift() ?? .999});
@@ -133,18 +136,18 @@ test("target expiry itself is free, but tapping the expired square costs one poi
     clock.advance(1_250);
     assert.equal(game.getState().score, 0);
     assert.equal(game.getState().missedTiles.includes(target.tile), true);
-    assert.deepEqual(game.hit(target.tile), {kind: "empty", value: -1});
-    assert.equal(game.getState().score, -1);
+    assert.deepEqual(game.hit(target.tile), {kind: "empty", value: 0});
+    assert.equal(game.getState().score, 0);
     assert.equal(game.getState().missedTiles.includes(target.tile), true);
     clock.advance(240);
     assert.equal(game.getState().missedTiles.includes(target.tile), false);
-    assert.deepEqual(game.hit(target.tile), {kind: "empty", value: -1});
-    assert.equal(game.getState().score, -2);
+    assert.deepEqual(game.hit(target.tile), {kind: "empty", value: 0});
+    assert.equal(game.getState().score, 0);
     game.dispose();
   }
 });
 
-test("targets are hittable just before deadline; delayed expiry taps score -1 and cannot award a hit", () => {
+test("targets are hittable just before deadline; delayed expiry taps are a neutral miss", () => {
   const beforeDeadline = createHarness();
   beforeDeadline.game.start();
   beforeDeadline.clock.advance(3_000);
@@ -158,34 +161,34 @@ test("targets are hittable just before deadline; delayed expiry taps score -1 an
   delayed.clock.advance(3_000);
   const [target] = delayed.game.getState().targets;
   delayed.clock.time += 1_250;
-  assert.deepEqual(delayed.game.hit(target.tile), {kind: "empty", value: -1});
-  assert.equal(delayed.game.getState().score, -1);
+  assert.deepEqual(delayed.game.hit(target.tile), {kind: "empty", value: 0});
+  assert.equal(delayed.game.getState().score, 0);
   delayed.game.dispose();
 });
 
-test("tap on a target after its deadline scores -1 even if its expiry callback is delayed", () => {
+test("tap on a target after its deadline is a score-neutral miss even if expiry is delayed", () => {
   const {clock, game} = createHarness();
   game.start();
   clock.advance(3_000);
   const [target] = game.getState().targets;
   clock.time += 1_251;
-  assert.deepEqual(game.hit(target.tile), {kind: "empty", value: -1});
-  assert.equal(game.getState().score, -1);
+  assert.deepEqual(game.hit(target.tile), {kind: "empty", value: 0});
+  assert.equal(game.getState().score, 0);
   game.dispose();
 });
 
-test("unlit taps cost one point, while countdown, between-round and ended taps cannot score", () => {
+test("unlit taps do not change score, while countdown, between-round and ended taps cannot score", () => {
   const {clock, game} = createHarness({duration: 100, countdownDuration: 30});
   game.start();
   assert.deepEqual(game.hit(39), {kind: "inactive"});
   assert.equal(game.getState().score, 0);
   clock.advance(30);
-  assert.deepEqual(game.hit(39), {kind: "empty", value: -1});
-  assert.equal(game.getState().score, -1);
+  assert.deepEqual(game.hit(39), {kind: "empty", value: 0});
+  assert.equal(game.getState().score, 0);
   clock.advance(100);
   assert.equal(game.getState().phase, "between");
   assert.deepEqual(game.hit(39), {kind: "inactive"});
-  assert.equal(game.getState().score, -1);
+  assert.equal(game.getState().score, 0);
   game.nextRound();
   clock.advance(30);
   clock.advance(100);
@@ -197,7 +200,7 @@ test("unlit taps cost one point, while countdown, between-round and ended taps c
   }
   assert.equal(game.getState().phase, "ended");
   assert.deepEqual(game.hit(39), {kind: "inactive"});
-  assert.equal(game.getState().totalScore, -1);
+  assert.equal(game.getState().totalScore, 0);
   game.dispose();
 });
 

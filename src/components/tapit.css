@@ -52,7 +52,7 @@ body:has(.tapit-app) #observablehq-header {
   height: 100vh;
   height: 100dvh;
   overflow: hidden;
-  padding: 0 clamp(16px, 3.2vw, 48px);
+  padding: max(0px, env(safe-area-inset-top)) max(clamp(16px, 3.2vw, 48px), env(safe-area-inset-right)) max(0px, env(safe-area-inset-bottom)) max(clamp(16px, 3.2vw, 48px), env(safe-area-inset-left));
   color: var(--tapit-ink);
   background:
     radial-gradient(ellipse at 50% 43%, rgba(84, 121, 71, .1), transparent 49%),
@@ -100,7 +100,7 @@ body:has(.tapit-app) #observablehq-header {
 }
 
 .tapit-home-arrow { font-size: 17px; color: var(--tapit-lime); }
-.tapit-header h1 { margin: 0; color: var(--tapit-ink); font-size: 19px; font-weight: 720; letter-spacing: -.055em; }
+.tapit-header h1 { margin: 0; color: var(--tapit-deep-green); font-size: 19px; font-weight: 720; letter-spacing: -.055em; }
 .tapit-header h1 span { color: var(--tapit-lime); }
 .tapit-sound {
   justify-self: end;
@@ -191,7 +191,6 @@ body:has(.tapit-app) #observablehq-header {
   cursor: pointer;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
-  transition: background-color 100ms linear, border-color 100ms linear, box-shadow 100ms linear;
 }
 
 .tapit-tile:hover:not(:disabled) { border-color: rgba(193, 255, 104, .68); }
@@ -293,7 +292,7 @@ body:has(.tapit-app) #observablehq-header {
 }
 
 @media (max-width: 700px) {
-  .tapit-app { padding-right: 14px; padding-left: 14px; }
+  .tapit-app { padding-right: max(14px, env(safe-area-inset-right)); padding-left: max(14px, env(safe-area-inset-left)); }
   .tapit-header { min-height: 40px; }
   .tapit-home { gap: 6px; font-size: 9px; }
   .tapit-header h1 { font-size: 15px; }
@@ -330,7 +329,7 @@ body:has(.tapit-app) #observablehq-header {
     grid-template-columns: minmax(0, 1fr) 40dvh minmax(0, 1fr);
     grid-template-rows: auto minmax(0, 1fr);
     gap: 0 16px;
-    padding: 8px 16px;
+    padding: max(8px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
   }
   .tapit-header {
     grid-column: 1;

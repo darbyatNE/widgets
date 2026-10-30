@@ -22,7 +22,7 @@ toc: false
   </a>
   <a class="card widget tapit-widget" href="./tapit">
     <h2>TapIt — Reaction Game</h2>
-    <p>A quick 20-second test of focus and reflexes. Tap the illuminated squares, avoid the dark ones, and see how many points you can score.</p>
+    <p>Five fast rounds of color-coded reflexes. Green targets add points, look-alike olive targets take them away, and targets vanish faster each round.</p>
   </a>
 </div>
 

@@ -11,9 +11,9 @@ Static site for [lee-river.com](https://lee-river.com), built with [Observable F
 
 Shared code lives in `src/components/`: `regression.js` holds the trend-line fits used by both pages, and `stats.js` holds the significance tests (Newey-West OLS, correlation p-values, Engle-Granger).
 
-TapIt is a 20-second reaction game with a 3-second countdown. Lit squares score +1 when tapped; tapping a dark square scores −1, while missed targets carry no penalty. Its timing and scoring engine is `src/components/tapit-engine.js`; run the focused deterministic tests with `node --test tests/tapit-engine.test.js`.
+TapIt is a five-round reaction game. Each 20-second round starts with a 3-second countdown; targets last 1,250 ms in round one, then compound shorter by 7% each round (about 935 ms in round five), while new targets continue to spawn every 100–1,000 ms. Four randomly selected shades show their signed value in a compact legend: light/deep green award +1/+2, light/deep olive subtract −1/−2. Expired targets are free; tapping an unlit square costs −1. The game tracks each round and the cumulative total, and offers generated Web Audio feedback with a sound toggle. Its timing and scoring engine is `src/components/tapit-engine.js`; deterministic tests run with `node --test tests/tapit-engine.test.js`.
 
-The 4×10 square field fits the viewport without scrolling. Short landscape screens move controls and concise rules into side rails, hide ornamental notes, and use nearly the full height for targets. Ten square rows inherently limit touch-target size on short screens (about 34px at 812×375); a visible note recommends portrait for larger targets without blocking play or keyboard access.
+The 4×10 square field fits the viewport without scrolling. Short landscape screens move controls and concise rules into side rails, hide ornamental notes, and use nearly the full height for targets. Ten square rows inherently limit touch-target size on short screens; a visible note recommends portrait for larger targets without blocking play or keyboard access. Hiding the page ends the current round as partial; completed rounds remain credited, but the partial round is not counted as complete.
 
 ### Chart page layout
 

@@ -6,7 +6,10 @@
   --tapit-ink: #edf4ed;
   --tapit-muted: #93a69a;
   --tapit-lime: #c1ff68;
-  --tapit-coral: #ff806f;
+  --tapit-light-green: #a7e86c;
+  --tapit-deep-green: #3c9f55;
+  --tapit-light-olive: #b9b65b;
+  --tapit-deep-olive: #687b43;
 }
 
 html:has(.tapit-app),
@@ -78,6 +81,7 @@ body:has(.tapit-app) #observablehq-header {
   border-bottom: 1px solid var(--tapit-line);
 }
 
+.tapit-header { grid-template-columns: 1fr auto 1fr; }
 .tapit-home {
   display: inline-flex;
   align-items: center;
@@ -90,7 +94,7 @@ body:has(.tapit-app) #observablehq-header {
 }
 
 .tapit-home:hover { color: var(--tapit-lime); }
-.tapit-home:focus-visible, .tapit-action:focus-visible, .tapit-tile:focus-visible {
+.tapit-home:focus-visible, .tapit-action:focus-visible, .tapit-tile:focus-visible, .tapit-sound:focus-visible {
   outline: 2px solid var(--tapit-lime);
   outline-offset: 3px;
 }
@@ -98,24 +102,47 @@ body:has(.tapit-app) #observablehq-header {
 .tapit-home-arrow { font-size: 17px; color: var(--tapit-lime); }
 .tapit-header h1 { margin: 0; color: var(--tapit-ink); font-size: 19px; font-weight: 720; letter-spacing: -.055em; }
 .tapit-header h1 span { color: var(--tapit-lime); }
-.tapit-edition { justify-self: end; color: #73877a; font-size: 9px; letter-spacing: .16em; }
+.tapit-sound {
+  justify-self: end;
+  min-height: 34px;
+  padding: 0 11px;
+  border: 1px solid rgba(193, 255, 104, .42);
+  border-radius: 2px;
+  background: rgba(18, 38, 27, .7);
+  color: #d7edcf;
+  font: inherit;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .13em;
+  cursor: pointer;
+}
+.tapit-sound:hover { border-color: var(--tapit-lime); }
+.tapit-sound[aria-pressed="false"] { color: var(--tapit-muted); border-color: var(--tapit-line); }
 
 .tapit-scoreboard {
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  grid-template-columns: repeat(4, 1fr);
   align-items: center;
-  min-height: 91px;
-  max-width: 760px;
+  grid-template-rows: 1fr auto;
+  min-height: 96px;
+  max-width: 850px;
   width: 100%;
   margin: 0 auto;
 }
 
 .tapit-stat { display: flex; flex-direction: column; gap: 0; min-width: 90px; }
+.tapit-stat-round, .tapit-stat-total { align-items: center; }
 .tapit-stat-time { align-items: flex-end; }
 .tapit-stat-label { color: var(--tapit-muted); font-size: 9px; font-weight: 700; letter-spacing: .2em; }
-.tapit-stat strong { font-size: clamp(29px, 4vw, 40px); font-weight: 550; line-height: 1.05; letter-spacing: -.07em; }
+.tapit-stat strong { font-size: clamp(25px, 3.5vw, 37px); font-weight: 550; line-height: 1.05; letter-spacing: -.07em; }
+.tapit-stat strong span { color: var(--tapit-muted); font-size: .48em; letter-spacing: -.02em; }
+.tapit-stat-total strong { color: #c6d9c8; }
 .tapit-stat-time strong { color: var(--tapit-lime); }
-.tapit-status { margin: 0; color: #91a497; font-size: 9px; font-weight: 650; letter-spacing: .2em; }
+.tapit-status { grid-column: 1 / 3; margin: 0 0 7px; color: #91a497; font-size: 9px; font-weight: 650; letter-spacing: .2em; }
+.tapit-progress { grid-column: 3 / 5; display: flex; justify-content: flex-end; gap: 5px; margin-bottom: 10px; }
+.tapit-progress i { width: 22px; height: 3px; background: rgba(173, 194, 177, .2); }
+.tapit-progress i.is-current { background: var(--tapit-lime); box-shadow: 0 0 9px rgba(193, 255, 104, .4); }
+.tapit-progress i.is-complete { background: #5da76c; }
 
 .tapit-arena {
   position: relative;
@@ -169,11 +196,14 @@ body:has(.tapit-app) #observablehq-header {
 
 .tapit-tile:hover:not(:disabled) { border-color: rgba(193, 255, 104, .68); }
 .tapit-tile.is-lit {
-  border-color: #dbffa9;
-  background: var(--tapit-lime);
-  box-shadow: 0 0 8px rgba(193, 255, 104, .75), 0 0 25px rgba(193, 255, 104, .3), inset 0 1px rgba(255, 255, 255, .8);
+  border-color: rgba(239, 255, 220, .85);
+  box-shadow: 0 0 9px rgba(180, 218, 112, .35), inset 0 1px rgba(255, 255, 255, .48);
 }
-.tapit-tile.is-missed { border-color: var(--tapit-coral); background: rgba(255, 128, 111, .42); }
+.tapit-tile.is-lit.is-light-green { background: var(--tapit-light-green); }
+.tapit-tile.is-lit.is-deep-green { background: var(--tapit-deep-green); }
+.tapit-tile.is-lit.is-light-olive { background: var(--tapit-light-olive); }
+.tapit-tile.is-lit.is-deep-olive { background: var(--tapit-deep-olive); }
+.tapit-tile.is-missed { border-color: rgba(177, 190, 140, .3); background: rgba(111, 130, 73, .24); }
 .tapit-tile:disabled { cursor: default; }
 
 .tapit-overlay {
@@ -186,10 +216,11 @@ body:has(.tapit-app) #observablehq-header {
 }
 
 .tapit-overlay[hidden] { display: none; }
-.tapit-overlay-panel { display: flex; flex-direction: column; align-items: center; width: min(250px, 90%); padding: 14px 8px; }
+.tapit-overlay-panel { display: flex; flex-direction: column; align-items: center; width: min(310px, 92%); padding: 14px 8px; }
 .tapit-overlay-kicker { color: var(--tapit-lime); font-size: 8px; font-weight: 700; letter-spacing: .2em; }
 .tapit-overlay-panel strong { margin-top: 9px; font-size: clamp(26px, 6vw, 38px); font-weight: 560; line-height: 1.08; letter-spacing: -.055em; }
 .tapit-overlay-panel p { margin: 9px 0 16px; color: #c0cec3; font-size: 11px; line-height: 1.45; }
+.tapit-results { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 11px; margin: -4px 0 14px; padding: 0; color: #d4dfd4; font-size: 10px; list-style: none; }
 
 .tapit-action {
   min-height: 39px;
@@ -207,6 +238,7 @@ body:has(.tapit-app) #observablehq-header {
 
 .tapit-action:hover:not(:disabled) { background: #d3ff9a; box-shadow: 0 0 18px rgba(193, 255, 104, .25); }
 .tapit-action:disabled { cursor: wait; opacity: .7; }
+.tapit-action:disabled { cursor: default; }
 
 .tapit-side-note {
   display: flex;
@@ -234,14 +266,24 @@ body:has(.tapit-app) #observablehq-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  min-height: 38px;
+  gap: 14px;
+  min-height: 50px;
   border-top: 1px solid var(--tapit-line);
   color: #aab9ae;
   font-size: 10px;
 }
 
-.tapit-footer-detail { color: #83958a; }
-.tapit-footer-detail b { padding: 0 5px; color: var(--tapit-lime); font-weight: 400; }
+.tapit-footer-rules { display: flex; flex-wrap: wrap; gap: 0 5px; color: #aab9ae; white-space: nowrap; }
+.tapit-footer-rules b { color: var(--tapit-lime); font-weight: 400; }
+.tapit-legend { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 5px 11px; margin: 0; padding: 0; list-style: none; color: #bac8bb; font-size: 9px; }
+.tapit-legend li { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.tapit-legend b { padding-left: 2px; color: var(--tapit-ink); font-weight: 750; }
+.tapit-legend i { width: 8px; height: 8px; border: 1px solid rgba(240, 255, 231, .52); border-radius: 1px; }
+.swatch-light-green { background: var(--tapit-light-green); }
+.swatch-deep-green { background: var(--tapit-deep-green); }
+.swatch-light-olive { background: var(--tapit-light-olive); }
+.swatch-deep-olive { background: var(--tapit-deep-olive); }
+.tapit-sound-note { color: #e7d99a; font-size: 9px; }
 .tapit-rotate-note { display: none; }
 
 @media (max-width: 1100px) {
@@ -252,15 +294,21 @@ body:has(.tapit-app) #observablehq-header {
 
 @media (max-width: 700px) {
   .tapit-app { padding-right: 14px; padding-left: 14px; }
-  .tapit-header { min-height: 48px; }
-  .tapit-home { gap: 7px; font-size: 10px; }
-  .tapit-header h1 { font-size: 17px; }
-  .tapit-edition { font-size: 7px; letter-spacing: .1em; }
-  .tapit-scoreboard { min-height: 67px; }
-  .tapit-stat strong { font-size: 30px; }
-  .tapit-stat-label { font-size: 8px; }
+  .tapit-header { min-height: 40px; }
+  .tapit-home { gap: 6px; font-size: 9px; }
+  .tapit-header h1 { font-size: 15px; }
+  .tapit-sound { min-height: 28px; padding: 0 7px; font-size: 8px; }
+  .tapit-scoreboard { min-height: 64px; }
+  .tapit-stat { min-width: 0; }
+  .tapit-stat strong { font-size: 25px; }
+  .tapit-stat-label { font-size: 7px; letter-spacing: .12em; }
   .tapit-status { font-size: 8px; letter-spacing: .14em; }
-  .tapit-footer { min-height: 31px; font-size: 9px; }
+  .tapit-progress { gap: 4px; }
+  .tapit-progress i { width: 15px; }
+  .tapit-footer { flex-direction: column; align-items: flex-start; justify-content: center; gap: 3px; min-height: 38px; padding: 2px 0; font-size: 8px; }
+  .tapit-footer-rules { gap: 0 4px; }
+  .tapit-legend { justify-content: flex-start; gap: 3px 8px; font-size: 7.5px; }
+  .tapit-sound-note { font-size: 8px; }
 }
 
 @media (max-width: 360px) {
@@ -269,9 +317,9 @@ body:has(.tapit-app) #observablehq-header {
 
 @media (max-height: 560px) {
   .tapit-header { min-height: 39px; }
-  .tapit-scoreboard { min-height: 51px; }
-  .tapit-stat strong { font-size: 26px; }
-  .tapit-footer { min-height: 25px; }
+  .tapit-scoreboard { min-height: 64px; }
+  .tapit-stat strong { font-size: 24px; }
+  .tapit-footer { min-height: 42px; }
   .tapit-side-note { gap: 10px; }
 }
 
@@ -287,15 +335,17 @@ body:has(.tapit-app) #observablehq-header {
   .tapit-header {
     grid-column: 1;
     grid-row: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-rows: 44px auto;
+    align-items: center;
     min-height: 0;
     border: 0;
   }
-  .tapit-home { min-height: 44px; font-size: 10px; }
-  .tapit-header h1 { font-size: 22px; }
-  .tapit-edition, .tapit-side-note { display: none; }
+  .tapit-home { grid-column: 1; grid-row: 1; min-height: 44px; font-size: 10px; }
+  .tapit-header h1 { grid-column: 1; grid-row: 2; font-size: 22px; }
+  .tapit-sound { grid-column: 2; grid-row: 1; align-self: center; margin: 0; }
+  .tapit-side-note { display: none; }
   .tapit-scoreboard {
     grid-column: 1;
     grid-row: 2;
@@ -310,6 +360,7 @@ body:has(.tapit-app) #observablehq-header {
   .tapit-stat-time { align-items: flex-start; }
   .tapit-stat strong { font-size: 30px; }
   .tapit-status { order: 1; font-size: 8px; letter-spacing: .1em; }
+  .tapit-progress { justify-content: flex-start; margin: 0; }
   .tapit-arena {
     grid-column: 2;
     grid-row: 1 / -1;
@@ -323,13 +374,15 @@ body:has(.tapit-app) #observablehq-header {
     flex-direction: column;
     align-items: flex-start;
     justify-content: center;
-    gap: 12px;
+    gap: 9px;
     min-height: 0;
     border: 0;
     font-size: 11px;
     line-height: 1.5;
   }
-  .tapit-footer-detail { max-width: 190px; }
+  .tapit-footer-rules { max-width: 190px; white-space: normal; }
+  .tapit-legend { display: grid; grid-template-columns: 1fr 1fr; justify-content: start; font-size: 8px; }
+  .tapit-sound-note { max-width: 190px; }
   .tapit-rotate-note {
     display: block;
     max-width: 190px;

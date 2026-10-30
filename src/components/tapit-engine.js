@@ -1,3 +1,16 @@
+export const TARGET_TYPES = Object.freeze({
+  lightPositive: Object.freeze({value: 1, color: "light-green", label: "light green"}),
+  deepPositive: Object.freeze({value: 2, color: "deep-green", label: "deep green"}),
+  lightNegative: Object.freeze({value: -1, color: "light-olive", label: "light olive"}),
+  deepNegative: Object.freeze({value: -2, color: "deep-olive", label: "deep olive"})
+});
+
+const targetTypes = Object.keys(TARGET_TYPES);
+
+export function targetLifetimeMs(round) {
+  return 1_250 * 0.93 ** (round - 1);
+}
+
 export function createTapItGame({
   now = () => performance.now(),
   setTimer = setTimeout,
@@ -9,30 +22,42 @@ export function createTapItGame({
 } = {}) {
   let phase = "idle";
   let score = 0;
+  let round = 1;
   let countdown = 0;
   let startAt = 0;
-  let message = "Tap every lit square. Unlit taps cost one point; missed targets are free.";
+  let roundDeadline = 0;
+  let message = "Five rounds. Tap green for points; olive costs points.";
   let generation = 0;
   let disposed = false;
+  let roundFinalized = false;
   const timers = new Set();
   const targets = new Map();
-  const missed = new Map();
+  const missed = new Set();
+  const roundScores = [];
   const listeners = new Set();
 
   function snapshot() {
     const elapsed = phase === "playing" ? Math.max(0, now() - startAt) : 0;
     const remainingMs = phase === "playing"
       ? Math.max(0, duration - elapsed)
-      : phase === "ended"
+      : phase === "ended" || phase === "between"
         ? 0
         : duration;
+    const completedScore = roundScores.reduce((total, value) => total + value, 0);
     return {
       phase,
+      round,
+      roundCount: 5,
       score,
+      totalScore: completedScore + (roundFinalized ? 0 : score),
+      roundScores: [...roundScores],
+      partialRound: phase === "ended" && !roundFinalized,
       countdown,
       remainingMs,
+      targetLifetime: targetLifetimeMs(round),
+      targets: [...targets].map(([tile, target]) => ({tile, type: target.type, value: TARGET_TYPES[target.type].value, deadline: target.deadline})),
       litTiles: [...targets.keys()],
-      missedTiles: [...missed.keys()],
+      missedTiles: [...missed],
       message
     };
   }
@@ -54,7 +79,6 @@ export function createTapItGame({
     for (const handle of timers) clearTimer(handle);
     timers.clear();
     targets.clear();
-    missed.clear();
   }
 
   function schedule(callback, delay, token = generation) {
@@ -68,45 +92,60 @@ export function createTapItGame({
     return handle;
   }
 
-  function finish(endMessage) {
-    if (phase !== "playing" && phase !== "countdown") return;
+  function finishRound() {
+    if (phase !== "playing") return;
     generation += 1;
     clearTimers();
-    phase = "ended";
+    roundScores.push(score);
+    roundFinalized = true;
     countdown = 0;
-    message = endMessage;
+    if (round < 5) {
+      phase = "between";
+      message = `Round ${round} complete.`;
+    } else {
+      phase = "ended";
+      message = "Five rounds complete. That is your final score.";
+    }
+    publish();
+  }
+
+  function markExpired(tile, token) {
+    missed.add(tile);
+    schedule(() => {
+      missed.delete(tile);
+      publish();
+    }, 240, token);
+  }
+
+  function expireTarget(tile, target, token) {
+    if (targets.get(tile) !== target) return;
+    const remaining = target.deadline - now();
+    if (remaining > 0) {
+      target.timer = schedule(() => expireTarget(tile, target, token), remaining, token);
+      return;
+    }
+    targets.delete(tile);
+    markExpired(tile, token);
     publish();
   }
 
   function spawnTarget(token) {
     if (phase !== "playing" || token !== generation) return;
-    if (now() - startAt >= duration) {
-      finish("Time. Your score is final.");
+    if (now() >= roundDeadline) {
+      finishRound();
       return;
     }
 
     const available = Array.from({length: 40}, (_, tile) => tile).filter((tile) => !targets.has(tile));
     if (available.length) {
-      const choice = Math.min(available.length - 1, Math.floor(Math.max(0, random()) * available.length));
-      const tile = available[choice];
-      const target = {deadline: now() + 1_000, timer: undefined};
-      target.timer = schedule(() => {
-        if (targets.get(tile) !== target) return;
-        targets.delete(tile);
-        missed.delete(tile);
-        const clearMiss = schedule(() => {
-          missed.delete(tile);
-          publish();
-        }, 240, token);
-        missed.set(tile, clearMiss);
-        publish();
-      }, 1_000, token);
+      const tileChoice = Math.min(available.length - 1, Math.floor(Math.max(0, random()) * available.length));
+      const tile = available[tileChoice];
+      const typeChoice = Math.min(targetTypes.length - 1, Math.floor(Math.max(0, random()) * targetTypes.length));
+      const type = targetTypes[typeChoice];
+      const target = {type, deadline: now() + targetLifetimeMs(round), timer: undefined};
+      target.timer = schedule(() => expireTarget(tile, target, token), target.deadline - now(), token);
       targets.set(tile, target);
-      const oldMiss = missed.get(tile);
-      if (oldMiss !== undefined) {
-        clearHandle(oldMiss);
-        missed.delete(tile);
-      }
+      missed.delete(tile);
       publish();
     }
 
@@ -114,41 +153,45 @@ export function createTapItGame({
     schedule(() => spawnTarget(token), nextIn, token);
   }
 
-  function startPlaying(token) {
-    if (phase !== "countdown" || token !== generation) return;
-    phase = "playing";
-    countdown = 0;
-    startAt = now();
-    message = "Round in progress.";
-    schedule(() => finish("Time. Your score is final."), duration, token);
-    scheduleClockTick(token);
-    spawnTarget(token);
-    publish();
-  }
-
   function scheduleClockTick(token) {
     if (phase !== "playing" || token !== generation) return;
     const elapsed = Math.max(0, now() - startAt);
     const untilNextSecond = 1_000 - (elapsed % 1_000);
     schedule(() => {
-      if (now() - startAt >= duration) {
-        finish("Time. Your score is final.");
+      if (now() >= roundDeadline) {
+        finishRound();
         return;
       }
       publish();
       scheduleClockTick(token);
-    }, untilNextSecond, token);
+    }, Math.min(untilNextSecond, Math.max(0, roundDeadline - now())), token);
   }
 
-  function start() {
+  function startPlaying(token) {
+    if (phase !== "countdown" || token !== generation) return;
+    phase = "playing";
+    countdown = 0;
+    score = 0;
+    roundFinalized = false;
+    startAt = now();
+    roundDeadline = startAt + duration;
+    message = `Round ${round} in progress.`;
+    schedule(() => finishRound(), duration, token);
+    scheduleClockTick(token);
+    spawnTarget(token);
+    publish();
+  }
+
+  function beginCountdown() {
     if (disposed) return;
     generation += 1;
     clearTimers();
     const token = generation;
     phase = "countdown";
     score = 0;
+    roundFinalized = false;
     countdown = 3;
-    message = "Get ready.";
+    message = `Round ${round}. Get ready.`;
     publish();
 
     const tickCountdown = () => {
@@ -156,7 +199,7 @@ export function createTapItGame({
       if (countdown > 1) {
         countdown -= 1;
         publish();
-        schedule(tickCountdown, 1_000, token);
+        schedule(tickCountdown, countdownDuration / 3, token);
       } else {
         startPlaying(token);
       }
@@ -164,32 +207,68 @@ export function createTapItGame({
     schedule(tickCountdown, countdownDuration / 3, token);
   }
 
+  function start() {
+    if (disposed || (phase !== "idle" && phase !== "ended")) return;
+    round = 1;
+    roundScores.length = 0;
+    missed.clear();
+    beginCountdown();
+  }
+
+  function nextRound() {
+    if (disposed || phase !== "between" || round >= 5) return;
+    round += 1;
+    missed.clear();
+    beginCountdown();
+  }
+
   function hit(tile) {
-    if (disposed || phase !== "playing") return false;
-    if (now() - startAt >= duration) {
-      finish("Time. Your score is final.");
-      return false;
+    if (disposed || phase !== "playing") return {kind: "inactive"};
+    if (now() >= roundDeadline) {
+      finishRound();
+      return {kind: "inactive"};
     }
-    if (!Number.isInteger(tile) || tile < 0 || tile >= 40) return false;
+    if (!Number.isInteger(tile) || tile < 0 || tile >= 40) return {kind: "invalid"};
 
     const target = targets.get(tile);
     if (target !== undefined) {
       clearHandle(target.timer);
       targets.delete(tile);
       if (now() < target.deadline) {
-        score += 1;
+        const {value} = TARGET_TYPES[target.type];
+        score += value;
         publish();
-        return true;
+        return {kind: "target", type: target.type, value};
       }
+      markExpired(tile, generation);
+      score -= 1;
+      publish();
+      return {kind: "empty", value: -1};
     }
     score -= 1;
     publish();
-    return false;
+    return {kind: "empty", value: -1};
   }
 
   function endWhenHidden() {
+    if (phase === "between") {
+      generation += 1;
+      clearTimers();
+      phase = "ended";
+      countdown = 0;
+      roundFinalized = true;
+      message = `Session ended because the page became hidden after round ${round}. Completed round scores are final.`;
+      publish();
+      return;
+    }
     if (phase === "playing" || phase === "countdown") {
-      finish("Round ended because the page became hidden. Your score is final.");
+      generation += 1;
+      clearTimers();
+      phase = "ended";
+      countdown = 0;
+      roundFinalized = false;
+      message = "Session ended because the page became hidden. The current round is partial.";
+      publish();
     }
   }
 
@@ -210,6 +289,7 @@ export function createTapItGame({
 
   return {
     start,
+    nextRound,
     hit,
     endWhenHidden,
     subscribe,
